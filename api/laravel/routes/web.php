@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
+// Route untuk autentikasi broadcasting
+// Route::post('/broadcasting/auth', [\App\Http\Controllers\BroadcastController::class, 'auth']);
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -16,6 +19,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+
+Broadcast::routes();  // Otomatis menambahkan route untuk broadcasting, termasuk otentikasi
 
 Auth::routes();
 

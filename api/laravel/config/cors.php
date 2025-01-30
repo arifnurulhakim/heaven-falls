@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
 
     'allowed_methods' => ['*'],
 
@@ -29,6 +29,16 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
+
+// return [
+//     'paths' => ['api/*', 'broadcasting/auth'],
+//     'allowed_methods' => ['*'],
+//     'allowed_origins' => ['http://localhost:8081'], // alamat frontend kamu
+//     'allowed_headers' => ['*'],
+//     'exposed_headers' => [],
+//     'max_age' => 0,
+//     'supports_credentials' => true,
+// ];

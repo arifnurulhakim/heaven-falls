@@ -42,11 +42,12 @@ class PlayerController extends Controller
     public function login(Request $request)
     {
         try {
+            // Validasi awal untuk memastikan `email_or_username` dan `password` ada
             $validator = Validator::make($request->all(), [
-                'email' => 'required',
+                'email_or_username' => 'required',
                 'password' => 'required',
             ]);
-
+    
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -54,17 +55,49 @@ class PlayerController extends Controller
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
-
-            $credentials = $request->only('email', 'password');
-            Auth::shouldUse('player');
+    
+            // Cek apakah input adalah email atau username
+            $input = $request->email_or_username;
+    
+            if (filter_var($input, FILTER_VALIDATE_EMAIL)) {
+                // Validasi jika input adalah email
+                $validator = Validator::make($request->all(), [
+                    'email_or_username' => 'email|exists:hd_players,email',
+                ], [
+                    'email_or_username.exists' => 'The provided email does not exist in our records.',
+                ]);
+            } else {
+                // Validasi jika input adalah username
+                $validator = Validator::make($request->all(), [
+                    'email_or_username' => 'string|min:4|max:13|exists:hd_players,username',
+                ], [
+                    'email_or_username.exists' => 'The provided username does not exist in our records.',
+                ]);
+            }
+    
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $validator->errors(),
+                    'error_code' => 'INPUT_VALIDATION_ERROR',
+                ], 422);
+            }
+    
+            // Menentukan kredensial berdasarkan input (email atau username)
+            $credentials = filter_var($input, FILTER_VALIDATE_EMAIL)
+                ? ['email' => $input, 'password' => $request->password]
+                : ['username' => $input, 'password' => $request->password];
+    
+            Auth::shouldUse('player'); // Menggunakan guard "player"
+    
             if (!Auth::attempt($credentials)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Username or password invalid',
-                    'error_code' => 'USERNAME_OR_PASSWORD_INVALID',
+                    'message' => 'Email/Username or password invalid',
+                    'error_code' => 'EMAIL_OR_USERNAME_INVALID',
                 ], 401);
             }
-
+    
             $player = Auth::user();
             $token = JWTAuth::fromUser($player);
 
@@ -81,19 +114,24 @@ class PlayerController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
     public function updateprofile(Request $request)
     {
         try {
+            // Validasi input dari permintaan
             $validator = Validator::make($request->all(), [
-                'gender' => 'required|integer|in:1,2',
-                'mobile_number' => 'nullable|string|max:50', // Adjust validation based on your requirements
+                'gender' => 'nullable|integer|in:1,2',
+                'mobile_number' => 'nullable|string|max:50',
                 'players_ip_address' => 'nullable|string|max:30',
                 'players_mac_address' => 'nullable|string|max:30',
                 'players_os_type' => 'nullable|integer',
-                // Add any other fields as necessary
+                'summary' => 'nullable|string|max:255',
+                'country_id' => 'nullable|exists:hc_countries,id',
+                'state_id' => 'nullable|exists:hc_states,id',
+                'real_name' => 'nullable|string|max:255',
+               
             ]);
-
+    
+            // Tanggapi jika validasi gagal
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -101,7 +139,8 @@ class PlayerController extends Controller
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
-
+    
+            // Ambil ID pemain yang sedang login
             $playerId = Auth::id();
             if (!$playerId) {
                 return response()->json([
@@ -109,25 +148,45 @@ class PlayerController extends Controller
                     'message' => 'Unauthorized, please login again',
                     'error_code' => 'USER_NOT_FOUND',
                 ], 401);
-            };
-
-            $player = Player::where('id', $playerId)->first();
+            }
+    
+            // Temukan pemain berdasarkan ID
+            $player = Player::find($playerId);
+            if (!$player) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Player not found',
+                    'error_code' => 'PLAYER_NOT_FOUND',
+                ], 404);
+            }
+    
+            // Update data pemain
             $player->update([
                 'gender' => $request->get('gender', $player->gender),
                 'mobile_number' => $request->get('mobile_number', $player->mobile_number),
                 'players_ip_address' => $request->get('players_ip_address', $player->players_ip_address),
                 'players_mac_address' => $request->get('players_mac_address', $player->players_mac_address),
                 'players_os_type' => $request->get('players_os_type', $player->players_os_type),
+                'summary' => $request->get('summary', $player->summary),
+                'country_id' => $request->get('country_id', $player->country_id),
+                'state_id' => $request->get('state_id', $player->state_id),
+                'real_name' => $request->get('real_name', $player->real_name),
             ]);
-
-
-
+    
+            // Berikan respons sukses
             return response()->json([
                 'status' => 'success',
+                'message' => 'Profile updated successfully',
                 'data' => $player,
             ], 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            // Tanggapi jika ada kesalahan server
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while updating profile',
+                'error_code' => 'INTERNAL_SERVER_ERROR',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 

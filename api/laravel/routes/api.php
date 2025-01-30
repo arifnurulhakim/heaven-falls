@@ -49,9 +49,17 @@ use App\Http\Controllers\HrSubscriptionPurchaseController;
 use App\Http\Controllers\HrProgressSubscriptionController;
 use App\Http\Controllers\HrStatCharacterPlayerController;
 use App\Http\Controllers\HdGameRecordsController;
+use App\Http\Controllers\HcCountriesController;
+use App\Http\Controllers\HcStatesController;
 
 use Illuminate\Support\Facades\Route;
 
+use Illuminate\Support\Facades\Broadcast;
+
+// Broadcast::routes();  // Otomatis menambahkan route untuk broadcasting, termasuk otentikasi
+Route::post('/broadcasting/auth', function () {
+    return auth()->user();
+})->middleware('checktokenplayer');
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -108,8 +116,8 @@ Route::post('/adminRegister', [PlayerController::class, 'AdminRegister'])->middl
 
 Route::get('/getprofile', [PlayerController::class, 'getprofile'])->name('getprofile');
 Route::get('/getprofileadmin', [PlayerController::class, 'getprofileadmin'])->name('getprofileadmin');
-Route::get('/logout', [PlayerController::class, 'logout'])->name('logout');
-Route::get('/logoutAdmin', [PlayerController::class, 'logoutAdmin'])->name('logoutAdmin');
+Route::get('/logout', [PlayerController::class, 'logout']);
+Route::get('/logoutAdmin', [PlayerController::class, 'logoutAdmin']);
 
 
 
@@ -129,6 +137,16 @@ Route::middleware('otentikasi')->group(function () {
         Route::get('/battlepass', 'index');
         // Route::delete('/battlepass', 'destroy');
         Route::get('/battlepass/{id}', 'show');
+    });
+
+    Route::controller(HcCountriesController::class)->group(function () {
+        Route::get('/countries', 'index');
+        Route::get('/country/{id}', 'show');
+    });
+    Route::controller(HcStatesController::class)->group(function () {
+        Route::get('/states', 'index');
+        Route::get('/states-country/{id}', 'showBycountry');
+        Route::get('/state/{id}', 'show');
     });
 
     Route::middleware('checktokenuser')->group(function () {
@@ -341,9 +359,21 @@ Route::middleware('otentikasi')->group(function () {
             Route::get('/stat-character-player/{id}', 'show');
         });
 
+        Route::controller(HcCountriesController::class)->group(function () {
+            Route::post('/country', 'store');
+            Route::put('/country/{id}', 'update');
+            Route::delete('/country', 'destroy');
+        });
+        Route::controller(HcStatesController::class)->group(function () {
+            Route::post('/state', 'store');
+            Route::put('/state/{id}', 'update');
+            Route::delete('/state', 'destroy');
+        });
+
     });
 
     Route::middleware('checktokenplayer')->group(function () {
+        Route::put('/update-profile', [PlayerController::class, 'updateprofile']);
         Route::get('levelsPlayer', [LevelController::class, 'showbyplayer']);
         Route::post('reward', [RewardController::class, 'reward']);
         Route::get('inventory-weapon', [HrInventoryPlayersController::class, 'inventoryWeapon']);

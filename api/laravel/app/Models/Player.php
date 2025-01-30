@@ -16,13 +16,16 @@ class Player extends Authenticatable implements JWTSubject
 
     protected $fillable = [
         'username',
+        'real_name',
         'email',
         'gender',
         'mobile_number',
         'password',
         'level_r_id',
         'inventory_r_id',
-        // 'weapon_r_id',
+        'country_id',
+        'state_id',
+        'summary',
         'players_ip_address',
         'players_mac_address',
         'players_os_type',
@@ -65,6 +68,16 @@ class Player extends Authenticatable implements JWTSubject
     public function skins()
     {
         return $this->hasMany(HrSkinCharacterPlayer::class, 'players_id');
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(HcCountries::class, 'country_id');
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(HcState::class, 'state_id');
     }
 
 

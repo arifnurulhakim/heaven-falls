@@ -30,4 +30,8 @@ class HdFriendlist extends Model
         'removed' => 'boolean',
         'blocked_by' => 'integer', // Can be null, so integer type
     ];
+    public function friend()
+{
+    return $this->belongsTo(Player::class, 'friend_id'); // Menyesuaikan dengan relasi yang tepat
+}
 }
