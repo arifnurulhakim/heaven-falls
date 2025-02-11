@@ -1,6 +1,8 @@
 <?php
+
+// routes/channels.php
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('friend-invites-updates.{userId}', function () {
-    return true;
+Broadcast::channel('user.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
 });

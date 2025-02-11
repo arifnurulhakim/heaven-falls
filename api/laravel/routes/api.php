@@ -54,12 +54,7 @@ use App\Http\Controllers\HcStatesController;
 
 use Illuminate\Support\Facades\Route;
 
-use Illuminate\Support\Facades\Broadcast;
-
-// Broadcast::routes();  // Otomatis menambahkan route untuk broadcasting, termasuk otentikasi
-Route::post('/broadcasting/auth', function () {
-    return auth()->user();
-})->middleware('checktokenplayer');
+use Illuminate\Http\Request;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -72,6 +67,16 @@ Route::post('/broadcasting/auth', function () {
  */
 
 
+ Route::post('/broadcasting/auth', function (Illuminate\Http\Request $request) {
+    // Ensure the user is authenticated
+    $user = $request->user();  // This will retrieve the authenticated user
+
+    if (!$user) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    return Broadcast::auth($request);
+})->middleware('checktokenplayer'); // Apply the auth:api middleware here
 
 Route::post('/password/email', ForgotPasswordController::class);
 
