@@ -47,7 +47,7 @@ class PlayerController extends Controller
                 'email_or_username' => 'required',
                 'password' => 'required',
             ]);
-    
+
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -55,10 +55,10 @@ class PlayerController extends Controller
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
-    
+
             // Cek apakah input adalah email atau username
             $input = $request->email_or_username;
-    
+
             if (filter_var($input, FILTER_VALIDATE_EMAIL)) {
                 // Validasi jika input adalah email
                 $validator = Validator::make($request->all(), [
@@ -74,7 +74,7 @@ class PlayerController extends Controller
                     'email_or_username.exists' => 'The provided username does not exist in our records.',
                 ]);
             }
-    
+
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -82,14 +82,14 @@ class PlayerController extends Controller
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
-    
+
             // Menentukan kredensial berdasarkan input (email atau username)
             $credentials = filter_var($input, FILTER_VALIDATE_EMAIL)
                 ? ['email' => $input, 'password' => $request->password]
                 : ['username' => $input, 'password' => $request->password];
-    
+
             Auth::shouldUse('player'); // Menggunakan guard "player"
-    
+
             if (!Auth::attempt($credentials)) {
                 return response()->json([
                     'status' => 'error',
@@ -97,7 +97,7 @@ class PlayerController extends Controller
                     'error_code' => 'EMAIL_OR_USERNAME_INVALID',
                 ], 401);
             }
-    
+
             $player = Auth::user();
             $token = JWTAuth::fromUser($player);
 
@@ -128,9 +128,9 @@ class PlayerController extends Controller
                 'country_id' => 'nullable|exists:hc_countries,id',
                 'state_id' => 'nullable|exists:hc_states,id',
                 'real_name' => 'nullable|string|max:255',
-               
+
             ]);
-    
+
             // Tanggapi jika validasi gagal
             if ($validator->fails()) {
                 return response()->json([
@@ -139,7 +139,7 @@ class PlayerController extends Controller
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
-    
+
             // Ambil ID pemain yang sedang login
             $playerId = Auth::id();
             if (!$playerId) {
@@ -149,7 +149,7 @@ class PlayerController extends Controller
                     'error_code' => 'USER_NOT_FOUND',
                 ], 401);
             }
-    
+
             // Temukan pemain berdasarkan ID
             $player = Player::find($playerId);
             if (!$player) {
@@ -159,7 +159,7 @@ class PlayerController extends Controller
                     'error_code' => 'PLAYER_NOT_FOUND',
                 ], 404);
             }
-    
+
             // Update data pemain
             $player->update([
                 'gender' => $request->get('gender', $player->gender),
@@ -172,7 +172,7 @@ class PlayerController extends Controller
                 'state_id' => $request->get('state_id', $player->state_id),
                 'real_name' => $request->get('real_name', $player->real_name),
             ]);
-    
+
             // Berikan respons sukses
             return response()->json([
                 'status' => 'success',
@@ -339,11 +339,18 @@ class PlayerController extends Controller
         try {
             // Get the authenticated user
             $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized, please login again',
+                    'error_code' => 'USER_NOT_FOUND',
+                ], 401);
+            }
 
             // Get user level details
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
-                ->select('hr_level_players.*', 'hc_levels.name as level_name') // Include relevant fields
+                ->select('hr_level_players.id', 'hr_level_players.level_id','hr_level_players.exp',  'hc_levels.name as level_name') // Include relevant fields
                 ->first();
                 $wallet = HcCurrency::leftJoin('hd_wallets', function($join) use ($user) {
                     $join->on('hc_currencies.id', '=', 'hd_wallets.currency_id')
@@ -558,7 +565,7 @@ class PlayerController extends Controller
                 ],
                 'username' => 'required|string|min:4|max:13',
                 'password' => 'required|string|min:6',
-                'gender' => 'required|integer|in:1,2',
+                'gender' => 'nullable|integer|in:1,2',
                 'mobile_number' => 'nullable|string|max:50',
                 'players_ip_address' => 'nullable|string|max:30',
                 'players_mac_address' => 'nullable|string|max:30',
