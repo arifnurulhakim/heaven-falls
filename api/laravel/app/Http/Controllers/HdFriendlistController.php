@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Player;
 use App\Models\HdFriendlist;
 use App\Models\HrReferrerCode;
 use Illuminate\Http\Request;
@@ -168,8 +169,7 @@ class HdFriendlistController extends Controller
 //         return response()->json(['error' => $e->getMessage()], 500);
 //     }
 // }
-
-public function invites()
+public function inviteAll()
 {
     try {
         $user = Auth::user();
@@ -178,26 +178,23 @@ public function invites()
         $search = request()->get('search', '');
         $getOrder = request()->get('order', '');
         $defaultOrder = $getOrder ? $getOrder : "id ASC";
+
         $orderMappings = [
             'idASC' => 'id ASC',
             'idDESC' => 'id DESC',
-            'nameASC' => 'hd_players.username ASC',
-            'nameDESC' => 'hd_players.username DESC',
         ];
-
         $order = $orderMappings[$getOrder] ?? $defaultOrder;
-        $validOrderValues = implode(',', array_keys($orderMappings));
-        $rules = [
-            'offset' => 'integer|min:0',
-            'limit' => 'integer|min:1',
-            'order' => "in:$validOrderValues",
-        ];
 
+        // Validasi input
         $validator = Validator::make([
             'offset' => $offset,
             'limit' => $limit,
             'order' => $getOrder,
-        ], $rules);
+        ], [
+            'offset' => 'integer|min:0',
+            'limit' => 'integer|min:1',
+            'order' => 'in:' . implode(',', array_keys($orderMappings)),
+        ]);
 
         if ($validator->fails()) {
             return response()->json([
@@ -207,28 +204,44 @@ public function invites()
             ], 400);
         }
 
-        // Build the query
-        $query = HdFriendList::orderByRaw($order)
-            ->leftJoin('hd_players', 'hd_friend_lists.player_id', '=', 'hd_players.id')
-            ->where('hd_friend_lists.friend_id', $user->id)  // Only filter by friend_id
-            ->where('hd_friend_lists.invited', true)
-            ->select(
-                'hd_friend_lists.*',
-                'hd_players.username as friend_name'
-            );
+        // Step 1: Ambil daftar friendlist tanpa join
+        $friendlist = HdFriendList::where(function ($q) use ($user) {
+                $q->where('friend_id', $user->id)
+                  ->orWhere('player_id', $user->id);
+            })
+            ->where('invited', true)
+            ->orderByRaw($order)
+            ->get();
 
-        if ($search !== '') {
-            $query->where('hd_players.username', 'like', "%$search%");
+        // Step 2: Kumpulkan unique player_id dan friend_id
+        $userIds = array_unique(array_merge(
+            $friendlist->pluck('player_id')->toArray(),
+            $friendlist->pluck('friend_id')->toArray()
+        ));
+
+        // Step 3: Ambil data pemain berdasarkan ID yang dikumpulkan
+        $playersQuery = Player::whereIn('id', $userIds);
+        if (!empty($search)) {
+            $playersQuery->where('username', 'like', "%$search%");
         }
+        $players = $playersQuery->get()->keyBy('id');
 
-        // Get the total count before applying offset/limit
-        $total_data = $query->count();
+        // Step 4: Tambahkan username ke setiap friendlist berdasarkan kondisi
+        $friendlist = $friendlist->map(function ($friend) use ($user, $players) {
+            $friend->friend_name = ($friend->player_id == $user->id)
+                ? ($players[$friend->friend_id]->username ?? null)
+                : ($players[$friend->player_id]->username ?? null);
+            return $friend;
+        });
 
-        // Apply offset and limit
-        $invites = $query->offset($offset)->limit($limit)->get();
+        // Step 5: Hitung total data setelah filter search
+        $total_data = $friendlist->count();
 
-        // Trigger the event for friend invites update
-        event(new Invite($invites, $user->id));
+        // Step 6: Apply offset & limit secara manual pada collection
+        $paginatedFriends = $friendlist->slice($offset, $limit)->values();
+
+        // Trigger event
+        event(new Invite($paginatedFriends, $user->id));
 
         return response()->json([
             'status' => 'success',
@@ -237,12 +250,87 @@ public function invites()
             'order' => $getOrder,
             'search' => $search,
             'total_data' => $total_data,
-            'data' => $invites,
+            'data' => $paginatedFriends,
         ]);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
 }
+    public function invites()
+    {
+        try {
+            $user = Auth::user();
+            $offset = request()->get('offset', 0);
+            $limit = request()->get('limit', 10);
+            $search = request()->get('search', '');
+            $getOrder = request()->get('order', '');
+            $defaultOrder = $getOrder ? $getOrder : "id ASC";
+            $orderMappings = [
+                'idASC' => 'id ASC',
+                'idDESC' => 'id DESC',
+                'nameASC' => 'hd_players.username ASC',
+                'nameDESC' => 'hd_players.username DESC',
+            ];
+
+            $order = $orderMappings[$getOrder] ?? $defaultOrder;
+            $validOrderValues = implode(',', array_keys($orderMappings));
+            $rules = [
+                'offset' => 'integer|min:0',
+                'limit' => 'integer|min:1',
+                'order' => "in:$validOrderValues",
+            ];
+
+            $validator = Validator::make([
+                'offset' => $offset,
+                'limit' => $limit,
+                'order' => $getOrder,
+            ], $rules);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'ERROR',
+                    'message' => 'Invalid input parameters',
+                    'errors' => $validator->errors(),
+                ], 400);
+            }
+
+            // Build the query
+            $query = HdFriendList::orderByRaw($order)
+                ->leftJoin('hd_players', 'hd_friend_lists.player_id', '=', 'hd_players.id')
+                ->where('hd_friend_lists.friend_id', $user->id)  // Only filter by friend_id
+                ->where('hd_friend_lists.invited', true)
+                ->select(
+                    'hd_friend_lists.*',
+                    'hd_players.username as friend_name'
+                );
+
+            if ($search !== '') {
+                $query->where('hd_players.username', 'like', "%$search%");
+            }
+
+            // Get the total count before applying offset/limit
+            $total_data = $query->count();
+
+            // Apply offset and limit
+            $invites = $query->offset($offset)->limit($limit)->get();
+
+            // Trigger the event for friend invites update
+            event(new Invite($invites, $user->id));
+
+            return response()->json([
+                'status' => 'success',
+                'offset' => $offset,
+                'limit' => $limit,
+                'order' => $getOrder,
+                'search' => $search,
+                'total_data' => $total_data,
+                'data' => $invites,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
 
     public function invited()
     {

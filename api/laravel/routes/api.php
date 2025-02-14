@@ -407,8 +407,11 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/acc-friend/{id}', 'accFriend');
             Route::delete('/delete-friend', 'deleteFriend');
             Route::get('/friendlist', 'index');
-            Route::get('/friendlist-following', 'following');
-            Route::get('/friendlist-follower', 'follower');
+            Route::get('/friendlist-invite', 'inviteAll');
+            Route::get('/friendlist-invites', 'invites');
+            Route::get('/friendlist-invited', 'invited');
+            Route::get('/friendlist-blocked', 'blocked');
+
         });
 
 
