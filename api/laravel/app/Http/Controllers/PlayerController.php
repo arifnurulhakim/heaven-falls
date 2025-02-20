@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Level;
 use App\Models\HrLevelPlayer;
+use App\Models\HdCharacterPlayer;
+use App\Models\HdWeaponPlayer;
 use App\Models\HcWeapon;
 use App\Models\HrReferrerCode;
 use Illuminate\Support\Str;
@@ -23,7 +25,6 @@ use App\Models\Character;
 use App\Models\Stat;
 use App\Models\Cosmetic;
 use App\Models\Item;
-use App\Models\HrWeaponPlayer;
 use App\Models\HrSubscriptionPurchase;
 use App\Models\HrExpSubscription;
 use App\Models\HdSubscription;
@@ -663,6 +664,7 @@ class PlayerController extends Controller
                 'level_id' =>"1",
             ]);
             $inventory = HrInventoryPlayer::create();
+            // dd($inventory);
 
             // Create the player
             $player = Player::create([
@@ -678,6 +680,15 @@ class PlayerController extends Controller
                 'level_r_id'=> $level->id,
                 'inventory_r_id' => $inventory->id,
                 // 'weapon_r_id' => $weapon->id,
+            ]);
+            $getInventory = HrInventoryPlayer::find($inventory->id);
+            $weapon = HdWeaponPlayer::create([
+                    'inventory_id' => $getInventory->id,
+                    'weapon_id' => $getInventory->weapon_primary_r_id,
+                ]);
+            $character = HdCharacterPlayer::create([
+                'inventory_id' => $getInventory->id,
+                'character_id' => $getInventory->character_r_id,
             ]);
 
             $player->makeHidden(['password']);

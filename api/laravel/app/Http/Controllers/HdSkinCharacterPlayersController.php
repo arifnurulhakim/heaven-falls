@@ -39,7 +39,7 @@ class HdSkinCharacterPlayersController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'skin_characters' => $skinCharacterPlayer,
+                'data' => $skinCharacterPlayer,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -70,7 +70,7 @@ class HdSkinCharacterPlayersController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'skin_characters' => $skins,
+                'data' => $skins,
             ], 200);
         } catch (\Exception $e) {
             dd($e);
@@ -146,7 +146,7 @@ class HdSkinCharacterPlayersController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Skin purchased successfully',
-                'data'=$skin
+                'data'=>$skin
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
