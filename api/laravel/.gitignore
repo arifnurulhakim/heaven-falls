@@ -13,3 +13,6 @@ node_modules/
 /public/storage
 /storage/*.log
 /storage/framework/
+
+# Ignore ZIP files
+*.zip
