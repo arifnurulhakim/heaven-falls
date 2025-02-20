@@ -1,0 +1,15 @@
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+# Ignore vendor directory (dependencies)
+vendor/
+
+# Ignore node modules (kalau pakai frontend di Laravel)
+node_modules/
+
+# Ignore compiled files
+/public/storage
+/storage/*.log
+/storage/framework/
