@@ -32,9 +32,11 @@ use App\Models\HrExpBattlepass;
 use App\Models\HrPeriodBattlepass;
 use App\Models\HrPeriodSubscription;
 use App\Models\HdBattlepass;
+use App\Models\HrPlayerLastSeen;
 use App\Models\HcCurrency;
 use App\Models\HcMap;
 use App\Models\HcCharacterRole;
+use App\Events\Friendlist;
 
 class PlayerController extends Controller
 {
@@ -100,6 +102,20 @@ class PlayerController extends Controller
 
             $player = Auth::user();
             $token = JWTAuth::fromUser($player);
+            $lastSeen = HrPlayerLastSeen::where('player_id', $player->id)->first();
+                if ($lastSeen) {
+                    // Jika data sudah ada, update last_seen menjadi null
+                    $lastSeen->update(['last_seen' => null]);
+                } else {
+                    // Jika data belum ada, buat entri baru dengan last_seen = null
+                    HrPlayerLastSeen::create([
+                        'player_id' => $player->id,
+                        'last_seen' => null,
+                    ]);
+                }
+
+                $this->pushLastSeenEvent();
+
 
             return response()->json([
                 'status' => 'success',
@@ -113,6 +129,49 @@ class PlayerController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+    public function pushLastSeenEvent()
+    {
+        $lastSeenData = HrPlayerLastSeen::join('hd_players', 'hr_player_last_seens.player_id', '=', 'hd_players.id')
+            ->select(
+                'hr_player_last_seens.player_id',
+                'hr_player_last_seens.last_seen',
+                'hd_players.username',
+                DB::raw("CASE WHEN hf_hr_player_last_seens.last_seen IS NULL THEN 'online' ELSE 'offline' END as status")
+            )
+            ->get();
+
+        if ($lastSeenData->isNotEmpty()) {
+            event(new Friendlist($lastSeenData));
+        } else {
+            \Log::info("Tidak ada data last seen yang bisa dikirim.");
+        }
+    }
+    public function offline()
+    {
+        $player = Auth::user();
+
+        $lastSeen = HrPlayerLastSeen::where('player_id', $player->id)->first();
+                if ($lastSeen) {
+                    // Jika data sudah ada, update last_seen menjadi null
+                    $lastSeen->update(['last_seen' => now()]);
+                } else {
+                    // Jika data belum ada, buat entri baru dengan last_seen = null
+                    HrPlayerLastSeen::create([
+                        'player_id' => $player->id,
+                        'last_seen' => now(),
+                    ]);
+                }
+                $this->pushLastSeenEvent();
+                 return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'id' => $player->id,
+                    'username' => $player->username,
+                    'last_seen' =>$lastSeen->last_seen
+                ],
+            ], 200);
+
     }
     public function updateprofile(Request $request)
     {

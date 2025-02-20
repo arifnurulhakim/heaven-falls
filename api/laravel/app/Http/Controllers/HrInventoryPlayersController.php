@@ -65,7 +65,7 @@ class HrInventoryPlayersController extends Controller
             $user = Auth::user();
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
-                ->select('hr_level_players.*', 'hc_levels.name as level_name')
+                ->select('hr_level_players.id', 'hr_level_players.level_id','hr_level_players.exp',  'hc_levels.name as level_name')
                 ->first();
 
             $weapons = HcWeapon::all();

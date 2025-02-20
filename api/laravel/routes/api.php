@@ -122,6 +122,7 @@ Route::post('/adminRegister', [PlayerController::class, 'AdminRegister'])->middl
 Route::get('/getprofile', [PlayerController::class, 'getprofile'])->name('getprofile');
 Route::get('/getprofileadmin', [PlayerController::class, 'getprofileadmin'])->name('getprofileadmin');
 Route::get('/logout', [PlayerController::class, 'logout']);
+Route::get('/offline', [PlayerController::class, 'offline']);
 Route::get('/logoutAdmin', [PlayerController::class, 'logoutAdmin']);
 
 
