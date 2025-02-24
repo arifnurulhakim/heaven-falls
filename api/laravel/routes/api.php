@@ -51,6 +51,7 @@ use App\Http\Controllers\HrStatCharacterPlayerController;
 use App\Http\Controllers\HdGameRecordsController;
 use App\Http\Controllers\HcCountriesController;
 use App\Http\Controllers\HcStatesController;
+use App\Http\Controllers\HcTopupController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -168,7 +169,7 @@ Route::middleware('otentikasi')->group(function () {
         Route::resource('sub-part-skins', HcSubPartSkinController::class);
         Route::resource('inventory-players', HrInventoryPlayersController::class);
         Route::resource('skin-character-players', HrSkinCharacterPlayersController::class);
-        Route::resource('currencies', HcCurrencyController::class);
+        Route::resource('topup', HcTopupController::class);
         Route::resource('currencies-shop', HrCurrenciesShopController::class);
         Route::resource('weapon-types', HcTypeWeaponController::class);
         Route::resource('mission-reward', HdMissionRewardController::class);
@@ -376,9 +377,19 @@ Route::middleware('otentikasi')->group(function () {
             Route::delete('/state', 'destroy');
         });
 
+        Route::controller(HcTopupController::class)->group(function () {
+            Route::post('/topup-add', 'store');
+            Route::post('/topup-update/{id}', 'update');
+            Route::get('/topup', 'index');
+            Route::delete('/topup', 'destroy');
+            Route::get('/topup/{id}', 'show');
+        });
+
     });
 
     Route::middleware('checktokenplayer')->group(function () {
+        Route::post('/topup', [PlayerController::class, 'topup']);
+
         Route::put('/update-profile', [PlayerController::class, 'updateprofile']);
         Route::get('levelsPlayer', [LevelController::class, 'showbyplayer']);
         Route::post('reward', [RewardController::class, 'reward']);
@@ -446,7 +457,6 @@ Route::middleware('otentikasi')->group(function () {
 
         });
 
-        Route::post('/topup', [PlayerController::class, 'topup']);
 
         Route::post('/upgrade-stat-character', [HrStatCharacterPlayerController::class, 'store']);
 
@@ -475,6 +485,9 @@ Route::middleware('otentikasi')->group(function () {
             Route::get('/game-records-player-detail', 'showPlayer'); // Untuk mengambil detail records per player
             Route::post('/game-records-player', 'store'); // Untuk menyimpan game record baru
         });
+
+        Route::get('/shop-topup', [HcTopupController::class, 'shopTopup']);
+        Route::post('/purchase-topup', [HcTopupController::class, 'purchaseTopup']);
 
 
     });

@@ -68,7 +68,7 @@ class HrInventoryPlayersController extends Controller
                 ->select('hr_level_players.id', 'hr_level_players.level_id','hr_level_players.exp',  'hc_levels.name as level_name')
                 ->first();
 
-            $weapons = HcWeapon::all();
+                $weapons = HcWeapon::with('type')->get();
             $weaponPlayer = HdWeaponPlayer::where('inventory_id', $user->inventory_r_id)->pluck('weapon_id')->toArray();
 
             foreach ($weapons as $weapon) {

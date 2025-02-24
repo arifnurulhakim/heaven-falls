@@ -26,7 +26,10 @@ class HcCharacter extends Model
     {
         return $this->belongsTo(HcCharacterRole::class, 'character_role_id');
     }
-
+    public function skins()
+    {
+        return $this->hasMany(HrSkinCharacter::class, 'character_id');
+    }
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

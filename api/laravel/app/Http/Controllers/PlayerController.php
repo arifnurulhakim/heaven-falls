@@ -169,7 +169,7 @@ class PlayerController extends Controller
                 'data' => [
                     'id' => $player->id,
                     'username' => $player->username,
-                    'last_seen' =>$lastSeen->last_seen
+                    'last_seen' =>now()
                 ],
             ], 200);
 
@@ -670,7 +670,7 @@ class PlayerController extends Controller
             $player = Player::create([
                 'email' => $request->email,
                 'username' => $request->username,
-                'gender' => $request->gender,
+                // 'gender' => $request->gender,
                 'mobile_number' => $request->mobile_number,
                 'password' => Hash::make($request->password),
                 'players_ip_address' => $request->players_ip_address,
@@ -686,6 +686,7 @@ class PlayerController extends Controller
                     'inventory_id' => $getInventory->id,
                     'weapon_id' => $getInventory->weapon_primary_r_id,
                 ]);
+
             $character = HdCharacterPlayer::create([
                 'inventory_id' => $getInventory->id,
                 'character_id' => $getInventory->character_r_id,
@@ -870,6 +871,7 @@ class PlayerController extends Controller
     {
         try {
             $user = Auth::user();
+            $playerId = $user->id;
             if (!$playerId) {
                 return response()->json([
                     'status' => 'error',
@@ -911,15 +913,15 @@ class PlayerController extends Controller
 
     public function load(){
         try{
-            $map = HcMap::with(['missions', 'rewards'])->get();
-            $characterRole =HcCharacterRole::get();
+            $maps = HcMap::with(['missions.rewards'])->get();
+            $characterRoles = HcCharacterRole::with(['characters.skins'])->get();
             $weapon = HcWeapon::get();
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'map' => $map,
-                    'character_role' => $characterRole,
+                    'map' => $maps,
+                    'character_role' => $characterRoles,
                     'weapon' => $weapon,
                 ]
             ], 200);

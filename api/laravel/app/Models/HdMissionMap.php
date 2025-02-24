@@ -29,6 +29,10 @@ class HdMissionMap extends Model
     {
         return $this->belongsTo(HcMap::class, 'maps_id');
     }
+    public function rewards()
+    {
+        return $this->hasMany(HdMissionReward::class, 'missions_map_id');
+    }
 
     public function creator()
     {

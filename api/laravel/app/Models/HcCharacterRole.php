@@ -21,6 +21,10 @@ class HcCharacterRole extends Model
         'created_by',
         'modified_by'
     ];
+    public function characters()
+    {
+        return $this->hasMany(HcCharacter::class, 'character_role_id');
+    }
 
     public function creator()
     {
