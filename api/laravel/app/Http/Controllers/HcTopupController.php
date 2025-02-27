@@ -19,12 +19,12 @@ class HcTopupController extends Controller
             $globalFilter = $request->input('globalFilter', '');
             $sortField = $request->input('sortField', 'id');
 
-            $validSortFields = ['id', 'name_topup', 'amount', 'currency_id'];
+            $validSortFields = ['id', 'name_topup', 'amount', 'currency_id','product_code'];
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json(['status' => 'ERROR', 'message' => 'Invalid sort field'], 400);
             }
 
-            $query = HcTopup::with(['currency', 'creator', 'modifier', 'topupCurrencies']);
+            $query = HcTopup::with(['currency', 'creator', 'modifier', 'topupCurrencies','product_code']);
 
             if ($globalFilter) {
                 $query->where('name_topup', 'like', "%{$globalFilter}%");
@@ -37,6 +37,7 @@ class HcTopupController extends Controller
                     'id' => $topup->id,
                     'name_topup' => $topup->name_topup,
                     'amount' => $topup->amount,
+                    'product_code' => $topup->product_code,
                     'currency' => $topup->currency ? $topup->currency->name : null,
                     'creator' => $topup->creator ? $topup->creator->name : null,
                     'modifier' => $topup->modifier ? $topup->modifier->name : null,
@@ -77,6 +78,7 @@ class HcTopupController extends Controller
                 'is_in_shop' => 'required|boolean',
                 'name_topup' => 'required|string|max:255',
                 'description' => 'nullable|string',
+                'product_code' => 'nullable|string|max:255',
                 'image' => 'nullable|string|max:255',
                 'amount' => 'required|integer|min:1',
                 'currency_id' => 'required|exists:hc_currencies,id',
@@ -101,6 +103,7 @@ class HcTopupController extends Controller
                 'is_in_shop' => $request->is_in_shop,
                 'name_topup' => $request->name_topup,
                 'description' => $request->description,
+                'product_code' => $request->product_code,
                 'image' => $request->image,
                 'amount' => $request->amount,
                 'currency_id' => $request->currency_id,
@@ -141,6 +144,7 @@ class HcTopupController extends Controller
                 'is_in_shop' => 'required|boolean',
                 'name_topup' => 'required|string|max:255',
                 'description' => 'nullable|string',
+                'product_code' => 'nullable|string|max:255',
                 'image' => 'nullable|string|max:255',
                 'amount' => 'required|integer|min:1',
                 'currency_id' => 'required|exists:hc_currencies,id',
@@ -173,6 +177,7 @@ class HcTopupController extends Controller
                 'is_in_shop' => $request->is_in_shop,
                 'name_topup' => $request->name_topup,
                 'description' => $request->description,
+                'product_code' => $request->product_code,
                 'image' => $request->image,
                 'amount' => $request->amount,
                 'currency_id' => $request->currency_id,
@@ -229,6 +234,7 @@ class HcTopupController extends Controller
                     'id' => $topup->id,
                     'name_topup' => $topup->name_topup,
                     'amount' => $topup->amount,
+                    'product_code' => $topup->product_code,
                     'currency' => $topup->currency ? $topup->currency->name : null,
                     'topup_currencies' => $topup->topupCurrencies->map(function ($topupCurrency) {
                         return [

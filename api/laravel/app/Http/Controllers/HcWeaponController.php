@@ -9,79 +9,93 @@ use Illuminate\Support\Facades\Validator;
 class HcWeaponController extends Controller
 {
     public function index(Request $request)
-    {
-        try {
-            $perPage = $request->input('pageSize', 10);
-            $sortField = $request->input('sortField', 'name_weapons');
-            $sortDirection = $request->input('sortDirection', 'asc');
-            $globalFilter = $request->input('globalFilter', '');
+{
+    try {
+        $perPage = (int) $request->input('pageSize', 10);
+        $sortField = $request->input('sortField', 'name_weapons');
+        $sortDirection = strtolower($request->input('sortDirection', 'asc'));
+        $globalFilter = $request->input('globalFilter', '');
 
-            $validSortFields = ['id', 'name_weapons', 'attack', 'durability', 'accuracy',
-            'recoil',
-            'firespeed','point_price', 'created_by', 'modified_by'];
+        // Pastikan sort direction hanya 'asc' atau 'desc'
+        if (!in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = 'asc';
+        }
 
-            if (!in_array($sortField, $validSortFields)) {
-                return response()->json([
-                    'status' => 'ERROR',
-                    'message' => 'Invalid sort field'
-                ], 400);
-            }
+        $validSortFields = [
+            'id', 'name_weapons', 'attack', 'durability',
+            'accuracy', 'recoil', 'firespeed',
+            'point_price', 'created_by', 'modified_by'
+        ];
 
-            $query = HcWeapon::with(['type', 'creator', 'modifier']);
-
-            if ($globalFilter) {
-                $query->where(function($query) use ($globalFilter) {
-                    $query->where('name_weapons', 'like', "%{$globalFilter}%")
-                          ->orWhere('description', 'like', "%{$globalFilter}%");
-                });
-            }
-
-            $weapons = $query->orderBy($sortField, $sortDirection)->paginate($perPage);
-
-            $weapons->transform(function ($weapon) {
-                return [
-                    'id' => $weapon->id,
-                    'name_weapons' => $weapon->name_weapons,
-                    'attack' => $weapon->attack,
-                    'durability' => $weapon->durability,
-                    'point_price' => $weapon->point_price,
-                    'type' => $weapon->type ? $weapon->type->name : null,
-                    'creator' => $weapon->creator ? $weapon->creator->name : null,
-                    'modifier' => $weapon->modifier ? $weapon->modifier->name : null,
-                ];
-            });
-
+        if (!in_array($sortField, $validSortFields)) {
             return response()->json([
-                'status' => 'success',
+                'status' => 'error',
+                'message' => 'Invalid sort field'
+            ], 400);
+        }
+
+        // Query utama dengan eager loading
+        $query = HcWeapon::with(['subType.type', 'creator', 'modifier']);
+
+        // Filter global berdasarkan nama senjata atau deskripsi
+        if (!empty($globalFilter)) {
+            $query->where(function ($q) use ($globalFilter) {
+                $q->where('name_weapons', 'like', "%{$globalFilter}%")
+                  ->orWhere('description', 'like', "%{$globalFilter}%");
+            });
+        }
+
+        // Sorting & Pagination
+        $weapons = $query->orderBy($sortField, $sortDirection)->paginate($perPage);
+
+        // Transformasi hasil agar lebih rapi
+        $weapons->transform(function ($weapon) {
+            return [
+                'id' => $weapon->id,
+                'name_weapons' => $weapon->name_weapons,
+                'attack' => $weapon->attack,
+                'durability' => $weapon->durability,
+                'point_price' => $weapon->point_price,
+                'type' => $weapon->subType->type->name ?? null, // Safe handling
+                'sub_type' => $weapon->subType->name ?? null,
+                'creator' => $weapon->creator->name ?? null,
+                'modifier' => $weapon->modifier->name ?? null,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'pagination' => [
                 'current_page' => $weapons->currentPage(),
                 'last_page' => $weapons->lastPage(),
-                'next_page' => $weapons->currentPage() < $weapons->lastPage() ? $weapons->currentPage() + 1 : null,
-                'prev_page' => $weapons->currentPage() > 1 ? $weapons->currentPage() - 1 : null,
-                'next_page_url' => $weapons->nextPageUrl(),
-                'prev_page_url' => $weapons->previousPageUrl(),
+                'next_page' => $weapons->nextPageUrl(),
+                'prev_page' => $weapons->previousPageUrl(),
                 'per_page' => $weapons->perPage(),
                 'total' => $weapons->total(),
-                'data' => $weapons->items(),
-                'params' => [
-                    'pageSize' => $perPage,
-                    'sortField' => $sortField,
-                    'sortDirection' => $sortDirection,
-                    'globalFilter' => $globalFilter,
-                ],
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+            ],
+            'data' => $weapons->items(),
+            'params' => [
+                'pageSize' => $perPage,
+                'sortField' => $sortField,
+                'sortDirection' => $sortDirection,
+                'globalFilter' => $globalFilter,
+            ],
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Something went wrong',
+            'error_detail' => $e->getMessage(),
+        ], 500);
     }
-
-
+}
     public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'is_active' => 'required|boolean',
                 'is_in_shop' => 'required|boolean',
-                'weapon_r_type' => 'required|integer|exists:hc_type_weapons,id',
+                'weapon_r_sub_type' => 'required|integer|exists:hc_sub_type_weapons,id',
                 'name_weapons' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
@@ -149,7 +163,7 @@ class HcWeaponController extends Controller
             $validator = Validator::make($request->all(), [
                 'is_active' => 'nullable|boolean',
                 'is_in_shop' => 'nullable|boolean',
-                'weapon_r_type' => 'nullable|integer|exists:hc_type_weapons,id',
+                'weapon_r_sub_type' => 'nullable|integer|exists:hc_sub_type_weapons,id',
                 'name_weapons' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',

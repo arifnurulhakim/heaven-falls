@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->integer('is_active')->nullable();
             $table->tinyInteger('is_in_shop')->nullable();
-            $table->bigInteger('weapon_r_type')->nullable();
+            $table->bigInteger('weapon_r_sub_type')->nullable();
             $table->string('name_weapons', 255);
             $table->text('description');
             $table->text('image')->nullable();

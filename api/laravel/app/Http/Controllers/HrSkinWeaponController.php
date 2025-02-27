@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HrSkinCharacter;
+use App\Models\HrSkinWeapon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class HrSkinCharacterController extends Controller
+class HrSkinWeaponController extends Controller
 {
     public function index(Request $request)
     {
@@ -28,7 +28,7 @@ class HrSkinCharacterController extends Controller
             }
 
             // Eager loading creator dan modifier
-            $query = HrSkinCharacter::with(['creator', 'modifier']);
+            $query = HrSkinWeapon::with(['creator', 'modifier']);
 
             // Filter global
             if ($globalFilter) {
@@ -109,7 +109,7 @@ class HrSkinCharacterController extends Controller
             $skinData = $request->all();
             $skinData['image_skin'] = $imageUrl;
 
-            $skin = HrSkinCharacter::create($skinData);
+            $skin = HrSkinWeapon::create($skinData);
 
             return response()->json(['status' => 'success', 'data' => $skin], 201);
         } catch (\Exception $e) {
@@ -121,7 +121,7 @@ class HrSkinCharacterController extends Controller
     public function show($id)
     {
         try {
-            $skin = HrSkinCharacter::findOrFail($id);
+            $skin = HrSkinWeapon::findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -135,10 +135,10 @@ class HrSkinCharacterController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $skin = HrSkinCharacter::find($id);
+            $skin = HrSkinWeapon::find($id);
 
             if (!$skin) {
-                return response()->json(['status' => 'error', 'message' => 'SkinCharacter not found', 'error_code' => 'NOT_FOUND'], 404);
+                return response()->json(['status' => 'error', 'message' => 'SkinWeapon not found', 'error_code' => 'NOT_FOUND'], 404);
             }
 
             $validator = Validator::make($request->all(), [
@@ -195,7 +195,7 @@ class HrSkinCharacterController extends Controller
     public function destroy($id)
     {
         try {
-            $skin = HrSkinCharacter::findOrFail($id);
+            $skin = HrSkinWeapon::findOrFail($id);
             $skin->delete();
 
             return response()->json([

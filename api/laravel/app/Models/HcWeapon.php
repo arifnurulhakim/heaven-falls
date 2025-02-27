@@ -14,7 +14,7 @@ class HcWeapon extends Model
     protected $fillable = [
         'is_active',
         'is_in_shop',
-        'weapon_r_type',
+        'weapon_r_sub_type',
         'name_weapons',
         'description',
         'image',
@@ -30,9 +30,13 @@ class HcWeapon extends Model
         'modified_by'
     ];
 
-    public function type()
+    public function stat()
     {
-        return $this->belongsTo(HcTypeWeapon::class, 'weapon_r_type');
+        return $this->hasMany(HcStatWeapon::class, 'weapon_id');
+    }
+    public function subType()
+    {
+        return $this->belongsTo(HcSubTypeWeapon::class, 'weapon_r_sub_type');
     }
     public function creator()
     {

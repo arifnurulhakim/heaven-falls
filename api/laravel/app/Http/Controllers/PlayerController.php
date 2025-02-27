@@ -34,6 +34,7 @@ use App\Models\HrPeriodBattlepass;
 use App\Models\HrPeriodSubscription;
 use App\Models\HdBattlepass;
 use App\Models\HrPlayerLastSeen;
+use App\Models\HcTypeWeapon;
 use App\Models\HcCurrency;
 use App\Models\HcMap;
 use App\Models\HcCharacterRole;
@@ -915,14 +916,14 @@ class PlayerController extends Controller
         try{
             $maps = HcMap::with(['missions.rewards'])->get();
             $characterRoles = HcCharacterRole::with(['characters.skins'])->get();
-            $weapon = HcWeapon::get();
+            $typeWeapon = HcTypeWeapon::with(['subType.weapon.stat'])->get();
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'map' => $maps,
                     'character_role' => $characterRoles,
-                    'weapon' => $weapon,
+                    'type_weapon' => $typeWeapon,
                 ]
             ], 200);
 

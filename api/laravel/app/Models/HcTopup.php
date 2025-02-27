@@ -15,6 +15,7 @@ class HcTopup extends Model
         'is_active',
         'is_in_shop',
         'name_topup',
+        'product_code',
         'description',
         'image',
         'amount',

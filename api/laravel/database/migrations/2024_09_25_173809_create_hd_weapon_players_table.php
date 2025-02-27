@@ -18,7 +18,7 @@ class CreateHdWeaponPlayersTable extends Migration
            // Ensure inventory_id and weapon_id are unsigned big integers
            $table->foreignId('inventory_id')->constrained('hf_hr_inventory_players')->onDelete('cascade');
            $table->foreignId('weapon_id')->constrained('hf_hc_currencies')->onDelete('cascade');
-
+            $table->integer('level');
            // Ensure created_by and modified_by are unsigned big integers
            $table->unsignedBigInteger('created_by');
            $table->unsignedBigInteger('modified_by')->nullable();

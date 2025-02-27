@@ -5,20 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class HcTypeWeapon extends Model
+class HrSkinWeapon extends Model
 {
     use HasFactory;
 
-    protected $table = 'hc_type_weapons';
+    protected $table = 'hr_skin_weapons';
 
     protected $fillable = [
-        'name',
+        'weapon_id',
+        'name_skin',
+        'level',
+        'code_skin',
+        'image_skin',
+        'point_price',
         'created_by',
         'modified_by'
     ];
-    public function subType()
+
+    public function skinPlayer()
     {
-        return $this->hasMany(HcSubTypeWeapon::class, 'type_weapon_id');
+        return $this->hasMany(HdSkinWeaponPlayer::class, 'skin_id');
     }
 
     public function creator()

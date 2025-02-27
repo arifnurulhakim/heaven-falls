@@ -5,20 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class HcTypeWeapon extends Model
+class HcStatWeapon extends Model
 {
     use HasFactory;
 
-    protected $table = 'hc_type_weapons';
+    protected $table = 'hc_stat_weapons';
 
     protected $fillable = [
-        'name',
+        'weapon_id',
+        'level_reach',
+        'accuracy',
+        'damage',
+        'range',
+        'fire_rate',
         'created_by',
         'modified_by'
     ];
-    public function subType()
+
+    public function weapon()
     {
-        return $this->hasMany(HcSubTypeWeapon::class, 'type_weapon_id');
+        return $this->belongsTo(HcWeapon::class, 'weapon_id');
     }
 
     public function creator()

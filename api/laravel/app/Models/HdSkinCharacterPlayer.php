@@ -15,7 +15,7 @@ class HdSkinCharacterPlayer extends Model
         'inventory_id',
         'skin_id',
         'character_id',
-        // 'skin_equipped',
+        'skin_equipped',
         // 'skin_status',
         'created_by',
         'modified_by'

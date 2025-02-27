@@ -19,6 +19,7 @@ use App\Http\Controllers\HcCurrencyController;
 use App\Http\Controllers\HrCurrenciesShopController;
 use App\Http\Controllers\HcWeaponController;
 use App\Http\Controllers\HcTypeWeaponController;
+use App\Http\Controllers\HcSubTypeWeaponController;
 use App\Http\Controllers\HdCharacterPlayersController;
 use App\Http\Controllers\HdSkinCharacterPlayersController;
 use App\Http\Controllers\HdMissionRewardController;
@@ -52,6 +53,10 @@ use App\Http\Controllers\HdGameRecordsController;
 use App\Http\Controllers\HcCountriesController;
 use App\Http\Controllers\HcStatesController;
 use App\Http\Controllers\HcTopupController;
+use App\Http\Controllers\HdSkinWeaponPlayersController;
+use App\Http\Controllers\HcStatWeaponController;
+use App\Http\Controllers\HrSkinWeaponController;
+use App\Http\Controllers\HrStatWeaponPlayerController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -169,9 +174,12 @@ Route::middleware('otentikasi')->group(function () {
         Route::resource('sub-part-skins', HcSubPartSkinController::class);
         Route::resource('inventory-players', HrInventoryPlayersController::class);
         Route::resource('skin-character-players', HrSkinCharacterPlayersController::class);
+        Route::resource('skin-weapon-players', HrSkinWeaponPlayersController::class);
+        Route::resource('weapon-stats', HcStatWeaponController::class);
         Route::resource('topup', HcTopupController::class);
         Route::resource('currencies-shop', HrCurrenciesShopController::class);
         Route::resource('weapon-types', HcTypeWeaponController::class);
+        Route::resource('weapon-sub-types', HcSubTypeWeaponController::class);
         Route::resource('mission-reward', HdMissionRewardController::class);
         // Route::resource('missions', HdMissionMapController::class);
         // Route::resource('maps', HcMapController::class);
@@ -183,6 +191,13 @@ Route::middleware('otentikasi')->group(function () {
             Route::delete('/skin-characters', 'destroy');
             Route::get('/skin-characters/{id}', 'show');
         });
+        Route::controller(HrSkinWeaponController::class)->group(function () {
+            Route::post('/skin-weapons', 'store');
+            Route::post('/skin-weapons-update/{id}', 'update');
+            Route::get('/skin-weapons', 'index');
+            Route::delete('/skin-weapons', 'destroy');
+            Route::get('/skin-weapons/{id}', 'show');
+        });
         Route::controller(HcWeaponController::class)->group(function () {
             Route::post('/weapons', 'store');
             Route::post('/weapons-update/{id}', 'update');
@@ -190,6 +205,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::delete('/weapons', 'destroy');
             Route::get('/weapons/{id}', 'show');
         });
+
 
         Route::controller(HcMapController::class)->group(function () {
             Route::post('/maps', 'store');
@@ -408,6 +424,11 @@ Route::middleware('otentikasi')->group(function () {
         Route::post('purchase-skin', [HdSkinCharacterPlayersController::class, 'purchaseSkin']);
         Route::post('use-skin', [HdSkinCharacterPlayersController::class, 'useSkin']);
 
+        Route::get('inventory-skin-weapon', [HdSkinWeaponPlayersController::class, 'inventorySkin']);
+        Route::get('shop-skin-weapon', [HdSkinWeaponPlayersController::class, 'shopSkin']);
+        Route::post('purchase-skin-weapon', [HdSkinWeaponPlayersController::class, 'purchaseSkin']);
+        Route::post('use-skin-weapon', [HdSkinWeaponPlayersController::class, 'useSkin']);
+
         Route::post('add-mission', [HdMissionRewardController::class, 'addMission']);
         Route::post('claim-reward', [HdMissionRewardController::class, 'claimReward']);
         Route::post('list-mission', [HdMissionRewardController::class, 'listMissionPlayer']);
@@ -459,6 +480,7 @@ Route::middleware('otentikasi')->group(function () {
 
 
         Route::post('/upgrade-stat-character', [HrStatCharacterPlayerController::class, 'store']);
+        Route::post('/upgrade-stat-weapon', [HrStatWeaponPlayerController::class, 'upgradeWeapon']);
 
         Route::get('/load', [PlayerController::class, 'load']);
 

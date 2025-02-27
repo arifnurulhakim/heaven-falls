@@ -10,7 +10,12 @@ use App\Models\HcWeapon;
 use App\Models\HcTypeWeapon;
 use App\Models\Player;
 use App\Models\HrLevelPlayer;
+use App\Models\HdSkinCharacterPlayer;
 use App\Models\HdWallet;
+use App\Models\HrSkinWeapon;
+use App\Models\HcStatWeapon;
+use App\Models\HdSkinWeaponPlayer;
+use App\Models\HcSubTypeWeapon;
 use App\Models\HdWeaponPlayer;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,42 +25,123 @@ class HrInventoryPlayersController extends Controller
     {
         try {
             $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated.'
+                ], 401);
+            }
 
-            // Mendapatkan data level player dengan join ke tabel hc_levels
+            // Ambil level player
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
                 ->select('hr_level_players.*', 'hc_levels.name as level_name')
                 ->first();
 
-            // Mendapatkan data inventory player
-            $inventoryPlayer = HrInventoryPlayer::where('id', $user->inventory_r_id)->first();
+            // Ambil inventory player
+            $inventoryPlayer = HrInventoryPlayer::find($user->inventory_r_id);
+            if (!$inventoryPlayer) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Inventory not found.'
+                ], 404);
+            }
 
-            // Mendapatkan data weapon player dengan join ke tabel hc_weapons dan hc_type_weapons
+            // Ambil senjata yang dimiliki oleh pemain
             $weaponPlayer = HdWeaponPlayer::where('inventory_id', $user->inventory_r_id)
-                ->leftJoin('hc_weapons', 'hd_weapon_players.weapon_id', '=', 'hc_weapons.id')
-                ->leftJoin('hc_type_weapons', 'hc_weapons.weapon_r_type', '=', 'hc_type_weapons.id')
-                ->select('hd_weapon_players.*', 'hc_weapons.name_weapons', 'hc_type_weapons.name as type_weapons')
+                ->select('weapon_id', 'level')
                 ->get()
-                ->map(function ($weapon) use ($inventoryPlayer) {
-                    // Tentukan apakah weapon ini digunakan berdasarkan kolom di inventory
-                    $weapon->used = (
-                        $weapon->weapon_id == $inventoryPlayer->weapon_primary_r_id ||
-                        $weapon->weapon_id == $inventoryPlayer->weapon_secondary_r_id ||
-                        $weapon->weapon_id == $inventoryPlayer->weapon_melee_r_id ||
-                        $weapon->weapon_id == $inventoryPlayer->weapon_explosive_r_id
-                    );
-                    return $weapon;
+                ->keyBy('weapon_id')
+                ->toArray();
+
+            // Ambil tipe senjata beserta sub-tipe dan senjata
+            $weapons = HcTypeWeapon::with(['subType.weapon'])->get();
+
+            // Ambil semua skin yang dimiliki dan yang sedang digunakan oleh player
+            $ownedSkins = HdSkinWeaponPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('skin_id')
+                ->toArray();
+
+            $equippedSkins = HdSkinWeaponPlayer::where('inventory_id', $user->inventory_r_id)
+                ->where('skin_equipped', true)
+                ->pluck('skin_id')
+                ->toArray();
+
+            // Iterasi untuk menambahkan data tambahan ke weapon
+            $weapons->each(function ($weaponType) use ($weaponPlayer, $inventoryPlayer, $ownedSkins, $equippedSkins) {
+                $weaponType->subType->each(function ($subType) use ($weaponPlayer, $inventoryPlayer, $ownedSkins, $equippedSkins) {
+                    $subType->weapon->each(function ($weapon) use ($weaponPlayer, $inventoryPlayer, $ownedSkins, $equippedSkins) {
+                        // Apakah senjata sedang digunakan?
+                        $weapon->used = in_array($weapon->id, [
+                            $inventoryPlayer->weapon_primary_r_id,
+                            $inventoryPlayer->weapon_secondary_r_id,
+                            $inventoryPlayer->weapon_melee_r_id,
+                            $inventoryPlayer->weapon_explosive_r_id
+                        ]);
+
+                        // Apakah senjata dimiliki?
+                        $weapon->owned = isset($weaponPlayer[$weapon->id]);
+
+                        // Ambil level weapon
+                        $weaponLevel = $weaponPlayer[$weapon->id]['level'] ?? null;
+                        $weapon->weapon_level = array_key_exists($weapon->id, $weaponPlayer) ? $weaponPlayer[$weapon->id]['level'] : null;
+
+                        // Ambil total statistik berdasarkan levelnya
+                        if ($weaponLevel) {
+                            $totalStats = HcStatWeapon::where('weapon_id', $weapon->id)
+                                ->where('level_reach', '<=', $weaponLevel)
+                                ->selectRaw('
+                                    SUM(accuracy) as total_accuracy,
+                                    SUM(damage) as total_damage,
+                                    SUM(`range`) as total_range,
+                                    SUM(fire_rate) as total_fire_rate
+                                ')
+                                ->first();
+
+                            $weapon->total_current_stat_weapon = [
+                                'accuracy' => $totalStats->total_accuracy ?? 0,
+                                'damage' => $totalStats->total_damage ?? 0,
+                                'range' => $totalStats->total_range ?? 0,
+                                'fire_rate' => $totalStats->total_fire_rate ?? 0,
+                            ];
+                        } else {
+                            $weapon->total_current_stat_weapon = [
+                                'accuracy' => 0,
+                                'damage' => 0,
+                                'range' => 0,
+                                'fire_rate' => 0,
+                            ];
+                        }
+
+                        // Ambil daftar stat untuk setiap level senjata
+                        $weapon->stat_level_weapons = HcStatWeapon::where('weapon_id', $weapon->id)->get();
+
+                        // Ambil daftar skin untuk setiap weapon
+                        $weapon->skin_weapon = HrSkinWeapon::where('weapon_id', $weapon->id)->get()->map(function ($skin) use ($ownedSkins, $equippedSkins) {
+                            return [
+                                'id' => $skin->id,
+                                'name_skin' => $skin->name_skin,
+                                'code_skin' => $skin->code_skin,
+                                'image_skin' => $skin->image_skin,
+                                'level' => $skin->level_reach,
+                                'owned' => in_array($skin->id, $ownedSkins),
+                                'used' => in_array($skin->id, $equippedSkins),
+                            ];
+                        });
+                    });
                 });
+            });
 
             return response()->json([
                 'status' => 'success',
                 'level' => $level,
-                'weapons' => $weaponPlayer,
+                'type_weapons' => $weapons,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => 'Something went wrong.',
+                'error_detail' => $e->getMessage(), // Bisa dihapus jika tidak ingin menampilkan detail error
             ], 500);
         }
     }
@@ -63,28 +149,51 @@ class HrInventoryPlayersController extends Controller
     {
         try {
             $user = Auth::user();
+
+            // Ambil informasi level user
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
-                ->select('hr_level_players.id', 'hr_level_players.level_id','hr_level_players.exp',  'hc_levels.name as level_name')
+                ->select('hr_level_players.id', 'hr_level_players.level_id', 'hr_level_players.exp', 'hc_levels.name as level_name')
                 ->first();
 
-                $weapons = HcWeapon::with('type')->get();
-            $weaponPlayer = HdWeaponPlayer::where('inventory_id', $user->inventory_r_id)->pluck('weapon_id')->toArray();
-
-            foreach ($weapons as $weapon) {
-                $weapon->isLock = $weapon->level_reach > $level->level_id;
-                $weapon->sell = !in_array($weapon->id, $weaponPlayer);
+            if (!$level) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Player level not found.',
+                ], 404);
             }
+
+            // Ambil semua tipe senjata beserta sub-tipe dan senjata di dalamnya
+            $weapons = HcTypeWeapon::with(['subType.weapon'])->get();
+
+            // Ambil semua weapon_id yang dimiliki player
+            $weaponPlayer = HdWeaponPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('weapon_id')
+                ->toArray();
+
+            // Loop untuk menambahkan properti `locked` dan `owned`
+            $weapons->each(function ($weaponType) use ($level, $weaponPlayer) {
+                foreach ($weaponType->subType as $subType) {
+                    foreach ($subType->weapon as $weapon) {
+                        // Cek apakah weapon terkunci berdasarkan level
+                        $weapon->locked = isset($weapon->level_reach) && $weapon->level_reach > $level->level_id;
+
+                        // Cek apakah weapon sudah dimiliki oleh player
+                        $weapon->owned = in_array($weapon->id, $weaponPlayer);
+                    }
+                }
+            });
 
             return response()->json([
                 'status' => 'success',
                 'level' => $level,
-                'weapons' => $weapons,
+                'type_weapon' => $weapons,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => 'Something went wrong.',
+                'error_detail' => $e->getMessage(), // Bisa dihapus jika tidak ingin menampilkan error detail
             ], 500);
         }
     }
@@ -199,7 +308,16 @@ class HrInventoryPlayersController extends Controller
                     'message' => 'Weapon not found',
                 ], 404);
             }
-            $weapon_type = HcTypeWeapon::find($weapon->weapon_r_type);
+
+
+            $weapon_sub_type = HcSubTypeWeapon::find($weapon->weapon_r_sub_type);
+            if (!$weapon_sub_type) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Weapon sub type not found',
+                ], 404);
+            }
+            $weapon_type = HcTypeWeapon::find($weapon_sub_type->type_weapon_id);
 
             if (!$weapon_type) {
                 return response()->json([
@@ -253,6 +371,9 @@ class HrInventoryPlayersController extends Controller
             ], 500);
         }
     }
+
+
+
 
 
 }
