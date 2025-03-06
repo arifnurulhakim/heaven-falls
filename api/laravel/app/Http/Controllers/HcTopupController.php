@@ -24,7 +24,7 @@ class HcTopupController extends Controller
                 return response()->json(['status' => 'ERROR', 'message' => 'Invalid sort field'], 400);
             }
 
-            $query = HcTopup::with(['currency', 'creator', 'modifier', 'topupCurrencies','product_code']);
+            $query = HcTopup::with(['currency', 'creator', 'modifier', 'topupCurrencies']);
 
             if ($globalFilter) {
                 $query->where('name_topup', 'like', "%{$globalFilter}%");
@@ -63,8 +63,19 @@ class HcTopupController extends Controller
     public function show($id)
     {
         try {
-            $topup = HcTopup::with('currency')->findOrFail($id);
-            return response()->json(['status' => 'success', 'data' => $topup]);
+            $topup = HcTopup::with('currency')->find($id);
+            if(!$topup){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'topup not found.',
+                ], 404);
+            }
+
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $topup,
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -79,7 +90,7 @@ class HcTopupController extends Controller
                 'name_topup' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'product_code' => 'nullable|string|max:255',
-                'image' => 'nullable|string|max:255',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5048',
                 'amount' => 'required|integer|min:1',
                 'currency_id' => 'required|exists:hc_currencies,id',
                 'topup_currencies' => 'required|array|min:1',
@@ -96,6 +107,17 @@ class HcTopupController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
+            $imageUrl = null;
+
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = 'topup-' . time() . '.' . $image->getClientOriginalExtension();
+                $image->move(public_path('images/topup'), $imageName);
+
+                // Save image URL in the database
+                $imageUrl = 'images/topup/' . $imageName;
+            }
+
 
             // Simpan data ke tabel hc_topup
             $topup = HcTopup::create([
@@ -104,7 +126,7 @@ class HcTopupController extends Controller
                 'name_topup' => $request->name_topup,
                 'description' => $request->description,
                 'product_code' => $request->product_code,
-                'image' => $request->image,
+                'image' => $imageUrl,
                 'amount' => $request->amount,
                 'currency_id' => $request->currency_id,
                 'created_by' => $request->created_by,
@@ -140,19 +162,27 @@ class HcTopupController extends Controller
         try {
             // Validasi request
             $validator = Validator::make($request->all(), [
-                'is_active' => 'required|boolean',
-                'is_in_shop' => 'required|boolean',
-                'name_topup' => 'required|string|max:255',
+                'is_active' => 'nullable|boolean',
+                'is_in_shop' => 'nullable|boolean',
+                'name_topup' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'product_code' => 'nullable|string|max:255',
-                'image' => 'nullable|string|max:255',
-                'amount' => 'required|integer|min:1',
-                'currency_id' => 'required|exists:hc_currencies,id',
-                'topup_currencies' => 'required|array|min:1',
-                'topup_currencies.*.currency_id' => 'required|exists:hc_currencies,id',
-                'topup_currencies.*.price_topup' => 'required|numeric|min:0',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
+                'amount' => 'nullable|integer|min:1',
+                'currency_id' => 'nullable|exists:hc_currencies,id',
+                'topup_currencies' => 'nullable|array|min:1',
+                'topup_currencies.*.currency_id' => 'nullable|exists:hc_currencies,id',
+                'topup_currencies.*.price_topup' => 'nullable|numeric|min:0',
                 'modified_by' => 'nullable|integer',
             ]);
+              if (!$request->all()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'At least one field must be provided for update.',
+                    'error_code' => 'VALIDATION_ERROR'
+                ], 422);
+            }
+
 
             if ($validator->fails()) {
                 return response()->json([
@@ -170,6 +200,25 @@ class HcTopupController extends Controller
                     'message' => 'Topup not found'
                 ], 404);
             }
+            $imageUrl = $topup->image;
+
+            if ($request->hasFile('image')) {
+                // Delete the old image if it exists
+                if ($topup->image) {
+                    $oldImagePath = public_path($topup->image);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+
+                // Upload and update the new image
+                $image = $request->file('image');
+                $imageName = 'topup-' . time() . '.' . $image->getClientOriginalExtension();
+                $image->move(public_path('images/topup'), $imageName);
+
+                // Update the image URL
+                $imageUrl = 'images/topup/' . $imageName;
+            }
 
             // Update data topup
             $topup->update([
@@ -178,7 +227,7 @@ class HcTopupController extends Controller
                 'name_topup' => $request->name_topup,
                 'description' => $request->description,
                 'product_code' => $request->product_code,
-                'image' => $request->image,
+                'image' => $imageUrl,
                 'amount' => $request->amount,
                 'currency_id' => $request->currency_id,
                 'modified_by' => $request->modified_by,
@@ -213,10 +262,19 @@ class HcTopupController extends Controller
     public function destroy($id)
     {
         try {
-            $topup = HcTopup::findOrFail($id);
+            $topup = HcTopup::find($id);
+            if(!$topup){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'topup not found.',
+                ], 404);
+            }
             $topup->delete();
 
-            return response()->json(['status' => 'success', 'message' => 'Topup deleted successfully'], 204);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'topup deleted successfully',
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HcStatWeapon;
+use App\Models\HcStatCharacter;
+use App\Models\HdUpgradeCurrency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class HcStatWeaponController extends Controller
+class HcStatCharacterController extends Controller
 {
     public function index(Request $request)
     {
@@ -16,7 +17,7 @@ class HcStatWeaponController extends Controller
             $sortDirection = $request->input('sortDirection', 'asc');
             $globalFilter = $request->input('globalFilter', '');
 
-            $validSortFields = ['id', 'weapon_id', 'level_reach', 'accuracy', 'damage', 'range', 'fire_rate', 'created_by', 'modified_by'];
+            $validSortFields = ['id', 'character_id', 'level_reach', 'hitpoints', 'damage', 'defense', 'speed', 'created_by', 'modified_by'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -25,43 +26,44 @@ class HcStatWeaponController extends Controller
                 ], 400);
             }
 
-            $query = HcStatWeapon::with(['weapon', 'creator', 'modifier']);
+            $query = HcStatCharacter::with(['character', 'creator', 'modifier']);
 
             if ($globalFilter) {
-                $query->whereHas('weapon', function ($q) use ($globalFilter) {
+                $query->whereHas('character', function ($q) use ($globalFilter) {
                     $q->where('name', 'like', "%{$globalFilter}%");
                 });
             }
 
-            $statWeapons = $query->orderBy($sortField, $sortDirection)->paginate($perPage);
+            $statCharacters = $query->orderBy($sortField, $sortDirection)->paginate($perPage);
 
-            $statWeapons->transform(function ($stat) {
+            $statCharacters->transform(function ($stat) {
                 return [
                     'id' => $stat->id,
-                    'weapon_id' => $stat->weapon_id,
-                    'name_weapons' => $stat->weapon->name ?? null,
+                    'character_id' => $stat->character_id,
+                    'character_name' => $stat->character->name ?? null,
                     'level_reach' => $stat->level_reach,
-                    'accuracy' => $stat->accuracy,
+                    'hitpoints' => $stat->hitpoints,
                     'damage' => $stat->damage,
-                    'range' => $stat->range,
-                    'fire_rate' => $stat->fire_rate,
+                    'defense' => $stat->defense,
+                    'speed' => $stat->speed,
+                    'skills' => $stat->skills,
                     'creator' => $stat->creator ? $stat->creator->name : null,
                     'modifier' => $stat->modifier ? $stat->modifier->name : null,
-                    'weapons'=>$stat->weapon
+                    'character'=>$stat->character
                 ];
             });
 
             return response()->json([
                 'status' => 'success',
-                'current_page' => $statWeapons->currentPage(),
-                'last_page' => $statWeapons->lastPage(),
-                'next_page' => $statWeapons->currentPage() < $statWeapons->lastPage() ? $statWeapons->currentPage() + 1 : null,
-                'prev_page' => $statWeapons->currentPage() > 1 ? $statWeapons->currentPage() - 1 : null,
-                'next_page_url' => $statWeapons->nextPageUrl(),
-                'prev_page_url' => $statWeapons->previousPageUrl(),
-                'per_page' => $statWeapons->perPage(),
-                'total' => $statWeapons->total(),
-                'data' => $statWeapons->items(),
+                'current_page' => $statCharacters->currentPage(),
+                'last_page' => $statCharacters->lastPage(),
+                'next_page' => $statCharacters->currentPage() < $statCharacters->lastPage() ? $statCharacters->currentPage() + 1 : null,
+                'prev_page' => $statCharacters->currentPage() > 1 ? $statCharacters->currentPage() - 1 : null,
+                'next_page_url' => $statCharacters->nextPageUrl(),
+                'prev_page_url' => $statCharacters->previousPageUrl(),
+                'per_page' => $statCharacters->perPage(),
+                'total' => $statCharacters->total(),
+                'data' => $statCharacters->items(),
                 'params' => [
                     'pageSize' => $perPage,
                     'sortField' => $sortField,
@@ -78,12 +80,13 @@ class HcStatWeaponController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'weapon_id' => 'required|exists:hc_weapons,id',
+                'character_id' => 'required|exists:hc_characters,id',
                 'level_reach' => 'required|integer|min:1',
-                'accuracy' => 'required|numeric|min:0|max:100',
+                'hitpoints' => 'required|numeric|min:0|max:100',
                 'damage' => 'required|numeric|min:0|max:100',
-                'range' => 'required|numeric|min:0|max:100',
-                'fire_rate' => 'required|numeric|min:0|max:100',
+                'defense' => 'required|numeric|min:0|max:100',
+                'speed' => 'required|numeric|min:0|max:100',
+                'skills' => 'required|string|min:0|max:100',
                 'created_by' => 'nullable|integer',
                 'modified_by' => 'nullable|integer',
             ]);
@@ -92,9 +95,9 @@ class HcStatWeaponController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
             }
 
-            $statWeapon = HcStatWeapon::create($request->all());
+            $statCharacter = HcStatCharacter::create($request->all());
 
-            return response()->json(['status' => 'success', 'data' => $statWeapon], 201);
+            return response()->json(['status' => 'success', 'data' => $statCharacter], 201);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'An error occurred.', 'error_code' => 'INTERNAL_ERROR'], 500);
         }
@@ -103,8 +106,8 @@ class HcStatWeaponController extends Controller
     public function show($id)
     {
         try {
-            $statWeapon = HcStatWeapon::with(['weapon', 'creator', 'modifier'])->find($id);
-            if(!$statWeapon){
+            $statCharacter = HcStatCharacter::with(['character', 'creator', 'modifier'])->find($id);
+            if(!$statCharacter){
                 return response()->json([
                     'status' => 'error',
                     'message' => 'stat weapon not found.',
@@ -113,17 +116,18 @@ class HcStatWeaponController extends Controller
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'id' => $statWeapon->id,
-                    'weapon_id' => $statWeapon->weapon_id,
-                    'weapons_name' => $statWeapon->weapon->name ?? null,
-                    'level_reach' => $statWeapon->level_reach,
-                    'accuracy' => $statWeapon->accuracy,
-                    'damage' => $statWeapon->damage,
-                    'range' => $statWeapon->range,
-                    'fire_rate' => $statWeapon->fire_rate,
-                    'creator' => $statWeapon->creator ? $statWeapon->creator->name : null,
-                    'modifier' => $statWeapon->modifier ? $statWeapon->modifier->name : null,
-                    'weapon'=>$statWeapon->weapon
+                    'id' => $statCharacter->id,
+                    'character_id' => $statCharacter->character_id,
+                    'character_name' => $statCharacter->character->name ?? null,
+                    'level_reach' => $statCharacter->level_reach,
+                    'hitpoints' => $statCharacter->hitpoints,
+                    'damage' => $statCharacter->damage,
+                    'defense' => $statCharacter->defense,
+                    'speed' => $statCharacter->speed,
+                    'skills' => $statCharacter->skils,
+                    'creator' => $statCharacter->creator ? $statCharacter->creator->name : null,
+                    'modifier' => $statCharacter->modifier ? $statCharacter->modifier->name : null,
+                    'character'=>$statCharacter->character,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -134,15 +138,16 @@ class HcStatWeaponController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $statWeapon = HcStatWeapon::findOrFail($id);
+            $statCharacter = HcStatCharacter::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'weapon_id' => 'nullable|exists:hc_weapons,id',
+                'character_id' => 'nullable|exists:hc_characters,id',
                 'level_reach' => 'nullable|integer|min:1',
-                'accuracy' => 'nullable|numeric|min:0|max:100',
+                'hitpoints' => 'nullable|numeric|min:0|max:100',
                 'damage' => 'nullable|numeric|min:0|max:100',
-                'range' => 'nullable|numeric|min:0|max:100',
-                'fire_rate' => 'nullable|numeric|min:0|max:100',
+                'defense' => 'nullable|numeric|min:0|max:100',
+                'speed' => 'nullable|numeric|min:0|max:100',
+                'skills' => 'nullable|string|min:0|max:100',
                 'created_by' => 'nullable|integer',
                 'modified_by' => 'nullable|integer',
             ]);
@@ -155,9 +160,9 @@ class HcStatWeaponController extends Controller
                 ], 422);
             }
 
-            $statWeapon->update($request->all());
+            $statCharacter->update($request->all());
 
-            return response()->json(['status' => 'success', 'data' => $statWeapon], 200);
+            return response()->json(['status' => 'success', 'data' => $statCharacter], 200);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'An error occurred.', 'error_code' => 'INTERNAL_ERROR'], 500);
         }
@@ -166,22 +171,21 @@ class HcStatWeaponController extends Controller
     public function destroy($id)
     {
         try {
-            $statWeapon = HcStatWeapon::find($id);
-            if(!$statWeapon){
+            $statCharacter = HcStatCharacter::find($id);
+            if(!$statCharacter){
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'stat Weapon not found.',
+                    'message' => 'stat character not found.',
                 ], 404);
             }
-            $statWeapon->delete();
+            $statCharacter->delete();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'stat Weapon deleted successfully',
+                'message' => 'stat character deleted successfully',
             ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 }

@@ -83,10 +83,10 @@ class HcCharacterController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:255|unique:hc_characters,name',
                 'desc' => 'nullable|string',
                 'assets_name' => 'required|string|max:255',
-                'gender_character' => 'required|string|max:50',
+                'gender_character' => 'required|boolean',
                 'point_price' => 'required|numeric',
                 'character_role_id' => 'required|integer|exists:hc_character_roles,id',
                 'created_by' => 'nullable|integer',
@@ -135,7 +135,10 @@ class HcCharacterController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'name' => 'nullable|string|max:255',
+               'name' => [
+                'required', 'string', 'max:255',
+                Rule::unique('hc_characters', 'name')->ignore($id),
+            ],
                 'desc' => 'nullable|string',
                 'assets_name' => 'nullable|string|max:255',
                 'gender_character' => 'nullable|string|max:50',
@@ -177,7 +180,7 @@ class HcCharacterController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Character deleted successfully',
-            ], 204);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

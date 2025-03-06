@@ -84,7 +84,7 @@ class HrSkinCharacterController extends Controller
             $validator = Validator::make($request->all(), [
                 'name_skin' => 'required|string|max:255',
                 'code_skin' => 'required|string|max:255',
-                'image_skin' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
+                'image_skin' => 'required|image|mimes:jpeg,png,jpg,gif|max:5048',
                 'gender_skin' => 'nullable|string',
                 'point_price' => 'required|numeric',
                 'created_by' => 'nullable|integer',
@@ -113,15 +113,22 @@ class HrSkinCharacterController extends Controller
 
             return response()->json(['status' => 'success', 'data' => $skin], 201);
         } catch (\Exception $e) {
+            dd($e);
             return response()->json(['status' => 'error', 'message' => 'An error occurred.', 'error_code' => 'INTERNAL_ERROR'], 500);
         }
     }
 
-
     public function show($id)
     {
         try {
-            $skin = HrSkinCharacter::findOrFail($id);
+            $skin = HrSkinCharacter::find($id);
+            if(!$skin){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'skin not found.',
+                ], 404);
+            }
+
 
             return response()->json([
                 'status' => 'success',
@@ -140,6 +147,14 @@ class HrSkinCharacterController extends Controller
             if (!$skin) {
                 return response()->json(['status' => 'error', 'message' => 'SkinCharacter not found', 'error_code' => 'NOT_FOUND'], 404);
             }
+            if (!$request->all()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'At least one field must be provided for update.',
+                    'error_code' => 'VALIDATION_ERROR'
+                ], 422);
+            }
+
 
             $validator = Validator::make($request->all(), [
                 'name_skin' => 'nullable|string|max:255',
@@ -192,16 +207,38 @@ class HrSkinCharacterController extends Controller
     }
 
 
+    // public function destroy($id)
+    // {
+    //     try {
+    //         $skin = HrSkinCharacter::find($id);
+
+    //         $skin->delete();
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'message' => 'Skin deleted successfully',
+    //         ], 204);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
+
     public function destroy($id)
     {
         try {
-            $skin = HrSkinCharacter::findOrFail($id);
+            $skin = HrSkinCharacter::find($id);
+            if(!$skin){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'skin not found.',
+                ], 404);
+            }
             $skin->delete();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Skin deleted successfully',
-            ], 204);
+                'message' => 'skin deleted successfully',
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

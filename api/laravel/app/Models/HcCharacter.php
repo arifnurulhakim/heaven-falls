@@ -21,6 +21,10 @@ class HcCharacter extends Model
         'created_by',
         'modified_by'
     ];
+    public function stat()
+    {
+        return $this->hasMany(HcStatCharacter::class, 'character_id');
+    }
 
     public function role()
     {

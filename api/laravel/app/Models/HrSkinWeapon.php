@@ -14,13 +14,18 @@ class HrSkinWeapon extends Model
     protected $fillable = [
         'weapon_id',
         'name_skin',
-        'level',
+        'level_reach',
         'code_skin',
         'image_skin',
-        'point_price',
+        'price',
         'created_by',
         'modified_by'
     ];
+
+    public function weapon()
+    {
+        return $this->belongsTo(HcWeapon::class, 'weapon_id');
+    }
 
     public function skinPlayer()
     {

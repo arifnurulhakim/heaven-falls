@@ -101,11 +101,17 @@ class HcCurrencyController extends Controller
         }
     }
 
-
     public function show($id)
     {
         try {
-            $currency = HcCurrency::findOrFail($id);
+            $currency = HcCurrency::find($id);
+            if(!$currency){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'currency not found.',
+                ], 404);
+            }
+
 
             return response()->json([
                 'status' => 'success',
@@ -115,6 +121,7 @@ class HcCurrencyController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
 
     public function update(Request $request, $id)
     {
@@ -153,16 +160,24 @@ class HcCurrencyController extends Controller
     }
 
 
+
+
     public function destroy($id)
     {
         try {
-            $currency = HcCurrency::findOrFail($id);
+            $currency = HcCurrency::find($id);
+            if(!$currency){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'currency not found.',
+                ], 404);
+            }
             $currency->delete();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Currency deleted successfully',
-            ], 204);
+                'message' => 'currency deleted successfully',
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

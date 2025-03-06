@@ -14,10 +14,7 @@ class HrStatCharacterPlayer extends Model
     protected $fillable = [
         'player_id',
         'character_id',
-        'hitpoints',
-        'damage',
-        'defense',
-        'speed',
+        'level',
     ];
 
     /**

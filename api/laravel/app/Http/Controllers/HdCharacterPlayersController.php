@@ -8,8 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\HcLevel;
 use App\Models\HcCharacter;
+use App\Models\HcStatCharacter;
+use App\Models\HrSkinCharacter;
 use App\Models\Player;
 use App\Models\HrLevelPlayer;
+use App\Models\HcCharacterRole;
+use App\Models\HrStatCharacterPlayer;
+use App\Models\HdSkinCharacterPlayer;
 use App\Models\HdWallet;
 
 use Illuminate\Support\Facades\Auth;
@@ -19,80 +24,113 @@ class HdCharacterPlayersController extends Controller
     public function inventoryCharacter()
     {
         try {
+            $userId = Auth::id();
+            if (!$userId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated.'
+                ], 401);
+            }
+
             $user = Auth::user();
 
-            // Mengambil data inventory pemain
-            $inventoryPlayer = HrInventoryPlayer::where('id', $user->inventory_r_id)->first();
+            // Ambil inventory player
+            $inventoryPlayer = HrInventoryPlayer::find($user->inventory_r_id);
+            if (!$inventoryPlayer) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Inventory not found.'
+                ], 404);
+            }
 
-            // Mengambil data karakter pemain beserta informasi statistik dan peran
-            $CharacterPlayer = HdCharacterPlayer::where('inventory_id', $user->inventory_r_id)
-                ->leftJoin('hc_characters', 'hd_character_players.character_id', '=', 'hc_characters.id')
-                ->leftJoin('hr_stat_character_players', function ($join) use ($user) {
-                    $join->on('hc_characters.id', '=', 'hr_stat_character_players.character_id')
-                        ->where('hr_stat_character_players.player_id', '=', $user->id);
-                })
-                ->leftJoin('hc_character_roles', 'hc_characters.character_role_id', '=', 'hc_character_roles.id')
-                ->select(
-                    'hd_character_players.id',
-                    'hd_character_players.character_id',
-                    'hd_character_players.inventory_id',
-                    'hc_characters.name as character_name',
-                    'hr_stat_character_players.hitpoints as stat_hitpoints',
-                    'hr_stat_character_players.damage as stat_damage',
-                    'hr_stat_character_players.defense as stat_defense',
-                    'hr_stat_character_players.speed as stat_speed',
-                    'hc_character_roles.id as role_id',
-                    'hc_character_roles.role as role_name',
-                    'hc_character_roles.hitpoints as role_hitpoints',
-                    'hc_character_roles.damage as role_damage',
-                    'hc_character_roles.defense as role_defense',
-                    'hc_character_roles.speed as role_speed'
-                )
-                ->get()
-                ->map(function ($character) use ($inventoryPlayer) {
-                    // Menghitung total statistik sebagai penjumlahan dari role dan stat_upgraded
-                    $totalHitpoints = ($character->role_hitpoints + $character->stat_hitpoints);
-                    $totalDamage = ($character->role_damage + $character->stat_damage);
-                    $totalDefense = ($character->role_defense + $character->stat_defense);
-                    $totalSpeed = ($character->role_speed + $character->stat_speed);
+            // Ambil karakter yang dimiliki oleh pemain
+            $characterPlayer = HdCharacterPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('level', 'character_id'); // Key: character_id, Value: level
 
-                    return [
-                        'character_id' => $character->character_id,
-                        'inventory_id' => $character->inventory_id,
-                        'character_name' => $character->character_name,
-                        'used' => $character->character_id == $inventoryPlayer->character_r_id,
-                        'role' => [
-                            'role_id' => $character->role_id,
-                            'role_name' => $character->role_name,
-                                'hitpoints' => $character->role_hitpoints,
-                                'damage' => $character->role_damage,
-                                'defense' => $character->role_defense,
-                                'speed' => $character->role_speed,
-                        ],
-                        'stat_upgraded' => [
-                            'hitpoints' => $character->stat_hitpoints,
-                            'damage' => $character->stat_damage,
-                            'defense' => $character->stat_defense,
-                            'speed' => $character->stat_speed,
-                        ],
-                        // Menambahkan total_stat untuk setiap karakter
-                        'total_stat' => [
-                            'hitpoints' => $totalHitpoints,
-                            'damage' => $totalDamage,
-                            'defense' => $totalDefense,
-                            'speed' => $totalSpeed,
-                        ]
-                    ];
+            // Ambil semua role karakter beserta karakter
+            $characterRoles = HcCharacterRole::with('characters')->get();
+
+            // Ambil statistik karakter yang dimiliki player
+            $statCharacters = HcStatCharacter::whereIn('character_id', $characterPlayer->keys())->get()
+                ->keyBy('character_id');
+
+            // Ambil daftar skin yang dimiliki dan yang sedang digunakan
+            $ownedSkins = HdSkinCharacterPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('skin_id')->toArray();
+
+            $equippedSkins = HdSkinCharacterPlayer::where('inventory_id', $user->inventory_r_id)
+                ->where('skin_equipped', true)
+                ->pluck('skin_id')->toArray();
+
+            // Iterasi untuk menambahkan data tambahan ke karakter
+            $characterRoles->each(function ($characterRole) use ($characterPlayer, $inventoryPlayer, $statCharacters, $ownedSkins, $equippedSkins) {
+                $characterRole->characters->each(function ($character) use ($characterPlayer, $inventoryPlayer, $statCharacters, $ownedSkins, $equippedSkins) {
+                    // Apakah karakter sedang digunakan?
+                    $character->used = $character->id == $inventoryPlayer->character_r_id;
+
+                    // Apakah karakter dimiliki?
+                    $character->owned = $characterPlayer->has($character->id);
+
+                    // Ambil level karakter
+                    $characterLevel = $characterPlayer->get($character->id);
+                    $character->character_level = $characterLevel ?? null;
+
+                    // Ambil statistik karakter jika tersedia
+                    if ($characterLevel) {
+                        $totalStats = HcStatCharacter::where('character_id', $character->id)
+                            ->where('level_reach', '<=', $characterLevel)
+                            ->selectRaw('
+                                SUM(hitpoints) as total_hitpoints,
+                                SUM(damage) as total_damage,
+                                SUM(`defense`) as total_defense,
+                                SUM(speed) as total_speed
+                            ')
+                            ->first();
+
+                        $character->total_current_stat_character = [
+                            'hitpoints' => optional($totalStats)->total_hitpoints ?? 0,
+                            'damage' => optional($totalStats)->total_damage ?? 0,
+                            'defense' => optional($totalStats)->total_defense ?? 0,
+                            'speed' => optional($totalStats)->total_speed ?? 0,
+                        ];
+                    } else {
+                        $character->total_current_stat_character = [
+                            'hitpoints' => 0,
+                            'damage' => 0,
+                            'defense' => 0,
+                            'speed' => 0,
+                        ];
+                    }
+
+                    // Ambil statistik level karakter
+                    $character->stat_level_characters = HcStatCharacter::where('character_id', $character->id)->get();
+
+                    // Ambil daftar skin untuk setiap karakter
+                    $character->skin_character = HrSkinCharacter::where('character_id', $character->id)
+                        ->get()
+                        ->map(function ($skin) use ($ownedSkins, $equippedSkins) {
+                            return [
+                                'id' => $skin->id,
+                                'name_skin' => $skin->name_skin,
+                                'code_skin' => $skin->code_skin,
+                                'image_skin' => $skin->image_skin,
+                                'level' => $skin->level_reach,
+                                'owned' => in_array($skin->id, $ownedSkins),
+                                'used' => in_array($skin->id, $equippedSkins),
+                            ];
+                        });
                 });
+            });
 
             return response()->json([
                 'status' => 'success',
-                'data' => $CharacterPlayer
+                'character_roles' => $characterRoles,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => 'Something went wrong.',
+                'error_detail' => $e->getMessage(),
             ], 500);
         }
     }
@@ -101,36 +139,58 @@ class HdCharacterPlayersController extends Controller
     {
         try {
             $user = Auth::user();
+
+            // Ambil informasi level user
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
-                ->select('hr_level_players.*', 'hc_levels.name as level_name')
+                ->select('hr_level_players.id', 'hr_level_players.level_id', 'hr_level_players.exp', 'hc_levels.name as level_name')
                 ->first();
 
-            $inventory = HrInventoryPlayer::where('id',$user->inventory_r_id)->first();
-            $characters = HcCharacter::all();
-            $characterPlayer = HdCharacterPlayer::where('inventory_id', $user->inventory_r_id)->pluck('character_id')->toArray();
-
-            foreach ($characters as $character) {
-                $character->locked = $character->level_reach > $level->level_id;
-                $character->sell = !in_array($character->id, $characterPlayer);
-                $character->used = false;
-                if($character->id == $inventory->character_r_id){
-                    $character->used = true;
-                }
+            if (!$level) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Player level not found.',
+                ], 404);
             }
+
+            // Ambil semua karakter berdasarkan perannya dan skin yang tersedia
+            $characters = HcCharacterRole::with(['characters.skins'])->get();
+
+            // Ambil semua character_id yang dimiliki player
+            $characterPlayer = HdCharacterPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('character_id')
+                ->toArray();
+
+            // Loop untuk menambahkan properti `locked` dan `owned`
+            $characters->each(function ($characterRole) use ($level, $characterPlayer) {
+                foreach ($characterRole->characters as $character) {
+                    // Cek apakah karakter terkunci berdasarkan level
+                    $character->locked = isset($character->level_reach) && $character->level_reach > $level->level_id;
+
+                    // Cek apakah karakter sudah dimiliki oleh player
+                    $character->owned = in_array($character->id, $characterPlayer);
+
+                    // Loop untuk menambahkan informasi pada setiap skin karakter
+                    $character->skins->each(function ($skin) use ($character) {
+                        $skin->owned = $character->owned; // Misalnya, jika karakter dimiliki, skin otomatis dimiliki
+                    });
+                }
+            });
 
             return response()->json([
                 'status' => 'success',
                 'level' => $level,
-                'characters' => $characters,
+                'character_roles' => $characters,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => 'Something went wrong.',
+                'error_detail' => $e->getMessage(), // Bisa dihapus jika tidak ingin menampilkan error detail
             ], 500);
         }
     }
+
 
     public function purchaseCharacter(Request $request)
     {

@@ -34,6 +34,10 @@ class HcWeapon extends Model
     {
         return $this->hasMany(HcStatWeapon::class, 'weapon_id');
     }
+    public function skins()
+    {
+        return $this->hasMany(HrSkinWeapon::class, 'weapon_id');
+    }
     public function subType()
     {
         return $this->belongsTo(HcSubTypeWeapon::class, 'weapon_r_sub_type');

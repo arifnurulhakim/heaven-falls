@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\HrStatWeaponPlayer;
 use App\Models\HdWeaponPlayer;
+use App\Models\HdUpgradeCurrency;
+use App\Models\HdWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +19,7 @@ class HrStatWeaponPlayerController extends Controller
             $globalFilter = $request->input('globalFilter', '');
             $sortField = $request->input('sortField', 'id');
 
-            $validSortFields = ['id', 'level', 'player_id', 'weapon_id', 'hitpoints', 'damage', 'defense', 'speed'];
+            $validSortFields = ['id', 'level', 'player_id', 'weapon_id', 'accuracy', 'damage', 'range', 'fire_rate'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -26,15 +28,12 @@ class HrStatWeaponPlayerController extends Controller
                 ], 400);
             }
 
-            $query = HrStatWeaponPlayer::with(['player', 'weapon']);
+            $query = PHrStatWeaponPlayer::with(['player', 'weapon']);
 
             if ($globalFilter) {
                 $query->where(function ($q) use ($globalFilter) {
-                    $q->where('hitpoints', 'like', "%{$globalFilter}%")
-                      ->orWhere('damage', 'like', "%{$globalFilter}%")
-                      ->orWhere('defense', 'like', "%{$globalFilter}%")
-                      ->orWhere('speed', 'like', "%{$globalFilter}%")
-                      ->orWhereHas('player', function ($playerQuery) use ($globalFilter) {
+
+                      $q->orWhereHas('player', function ($playerQuery) use ($globalFilter) {
                           $playerQuery->where('name', 'like', "%{$globalFilter}%");
                       })
                       ->orWhereHas('weapon', function ($weaponQuery) use ($globalFilter) {
@@ -52,10 +51,11 @@ class HrStatWeaponPlayerController extends Controller
                     'player_name' => $stat->player ? $stat->player->name : null,
                     'weapon_id' => $stat->weapon_id,
                     'weapon_name' => $stat->weapon ? $stat->weapon->name : null,
-                    'hitpoints' => $stat->hitpoints,
+                    'accuracy' => $stat->accuracy,
                     'damage' => $stat->damage,
-                    'defense' => $stat->defense,
-                    'speed' => $stat->speed,
+                    'range' => $stat->range,
+                    'fire_rate' => $stat->fire_rate,
+                    'weapon'=>$stats->weapon,
                 ];
             });
 
@@ -97,10 +97,10 @@ class HrStatWeaponPlayerController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'weapon_id' => 'required|integer|exists:hc_weapons,id',
-                'hitpoints' => 'nullable|integer|min:0',
+                'accuracy' => 'nullable|integer|min:0',
                 'damage' => 'nullable|integer|min:0',
-                'defense' => 'nullable|integer|min:0',
-                'speed' => 'nullable|integer|min:0',
+                'range' => 'nullable|integer|min:0',
+                'fire_rate' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
@@ -125,11 +125,11 @@ class HrStatWeaponPlayerController extends Controller
 
             if ($stat) {
                 // Update data jika sudah ada
-                $stat->update($request->only(['hitpoints', 'damage', 'defense', 'speed']));
+                $stat->update($request->only(['accuracy', 'damage', 'range', 'fire_rate']));
             } else {
                 // Buat data baru jika belum ada
                 $stat = HrStatWeaponPlayer::create(array_merge(
-                    $request->only(['weapon_id', 'hitpoints', 'damage', 'defense', 'speed']),
+                    $request->only(['weapon_id', 'accuracy', 'damage', 'range', 'fire_rate']),
                     ['player_id' => $user->id]
                 ));
             }
@@ -162,10 +162,10 @@ class HrStatWeaponPlayerController extends Controller
                     'player_name' => $stat->player ? $stat->player->name : null,
                     'weapon_id' => $stat->weapon_id,
                     'weapon_name' => $stat->weapon ? $stat->weapon->name : null,
-                    'hitpoints' => $stat->hitpoints,
+                    'accuracy' => $stat->accuracy,
                     'damage' => $stat->damage,
-                    'defense' => $stat->defense,
-                    'speed' => $stat->speed,
+                    'range' => $stat->range,
+                    'fire_rate' => $stat->fire_rate,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -185,10 +185,10 @@ class HrStatWeaponPlayerController extends Controller
             $validator = Validator::make($request->all(), [
                 'player_id' => 'nullable|integer|exists:players,id',
                 'weapon_id' => 'nullable|integer|exists:weapons,id',
-                'hitpoints' => 'nullable|integer|min:0',
+                'accuracy' => 'nullable|integer|min:0',
                 'damage' => 'nullable|integer|min:0',
-                'defense' => 'nullable|integer|min:0',
-                'speed' => 'nullable|integer|min:0',
+                'range' => 'nullable|integer|min:0',
+                'fire_rate' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
@@ -258,11 +258,37 @@ class HrStatWeaponPlayerController extends Controller
                     'message' => 'your does not have this weapon',
                     'error_code' => 'WEAPON_NOT_FOUND',
                     ], 404);
-            }else{
-                $WeaponPlayer->update([
-                    'level' => $WeaponPlayer->level + 1,
-                ]);
             }
+                else{
+                    $nextLevel =$WeaponPlayer->level + 1;
+                    $upgrade = HdUpgradeCurrency::where('category','weapon')->where('weapon_id',$request->weapon_id)->where('level',$nextLevel)->first();
+                    if (!$upgrade) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'upgrade price not found.',
+                        ], 404);
+                    }
+                    $walletGold = HdWallet::where('player_id', $user->id)->where('currency_id', 1)->sum('amount');
+                    if ($walletGold >= $upgrade->price) {
+                        $WeaponPlayer->update([
+                            'level' => $nextLevel
+                        ]);
+                        HdWallet::create([
+                            'player_id'   => $user->id,
+                            'currency_id' => 1,
+                            'amount'      => $upgrade->price * -1, // Nilai amount dibuat negatif
+                            'created_by'  => $user->id,
+                            'modified_by' => $user->id,
+                        ]);
+                    }else{
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Insufficient gold',
+                        ], 400);
+                    }
+
+                }
+
 
             return response()->json(['status' => 'success', 'data' => $WeaponPlayer], 201);
         } catch (\Exception $e) {

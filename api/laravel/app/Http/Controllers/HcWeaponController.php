@@ -136,11 +136,17 @@ class HcWeaponController extends Controller
         }
     }
 
-
     public function show($id)
     {
         try {
-            $weapon = HcWeapon::findOrFail($id);
+            $weapon = HcWeapon::with('currency')->find($id);
+            if(!$weapon){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'weapon not found.',
+                ], 404);
+            }
+
 
             return response()->json([
                 'status' => 'success',
@@ -222,13 +228,19 @@ class HcWeaponController extends Controller
     public function destroy($id)
     {
         try {
-            $weapon = HcWeapon::findOrFail($id);
+            $weapon = HcWeapon::find($id);
+            if(!$weapon){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'weapon not found.',
+                ], 404);
+            }
             $weapon->delete();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Weapon deleted successfully',
-            ], 204);
+                'message' => 'weapon deleted successfully',
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

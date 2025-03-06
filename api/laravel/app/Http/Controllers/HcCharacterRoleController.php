@@ -82,7 +82,7 @@ public function store(Request $request)
 {
     try {
         $validator = Validator::make($request->all(), [
-            'role' => 'required|string|max:255',
+            'role' => 'required|string|max:255|unique:hc_character_roles,role',
             'hitpoints' => 'required|integer',
             'damage' => 'required|integer',
             'defense' => 'required|integer',
@@ -142,7 +142,10 @@ public function store(Request $request)
 
 
             $validator = Validator::make($request->all(), [
-                'role' => 'nullable|string|max:255',
+                'role' => [
+                    'required', 'string', 'max:255',
+                    Rule::unique('hc_character_roles', 'role')->ignore($id),
+                ],
                 'hitpoints' => 'nullable|integer',
                 'damage' => 'nullable|integer',
                 'defense' => 'nullable|integer',
@@ -187,7 +190,7 @@ public function store(Request $request)
             return response()->json([
                 'status' => 'success',
                 'message' => 'Character deleted successfully',
-            ], 204);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

@@ -5,25 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class HrSkinCharacter extends Model
+class HcStatCharacter extends Model
 {
     use HasFactory;
 
-    protected $table = 'hr_skin_characters';
+    protected $table = 'hc_stat_characters';
 
     protected $fillable = [
         'character_id',
-        'name_skin',
-        'code_skin',
-        'image_skin',
-        'gender_skin',
-        'point_price',
+        'level',
+        'hitpoints',
+        'damage',
+        'defense',
+        'speed',
+        'skills',
         'created_by',
-        'modified_by'
+        'modified_by',
     ];
+
     public function character()
     {
-        return $this->belongsTo(HcCharacter::class, 'character_id', 'id');
+        return $this->belongsTo(HcCharacter::class, 'character_id');
     }
     public function creator()
     {

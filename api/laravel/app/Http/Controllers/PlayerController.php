@@ -637,7 +637,7 @@ class PlayerController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => $validator->errors(),
+                    'message' => implode(', ', $validator->errors()->all()), // Menggabungkan semua error menjadi string
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
@@ -915,8 +915,8 @@ class PlayerController extends Controller
     public function load(){
         try{
             $maps = HcMap::with(['missions.rewards'])->get();
-            $characterRoles = HcCharacterRole::with(['characters.skins'])->get();
-            $typeWeapon = HcTypeWeapon::with(['subType.weapon.stat'])->get();
+            $characterRoles = HcCharacterRole::with(['characters.stat', 'characters.skins'])->get();
+            $typeWeapon = HcTypeWeapon::with(['subType.weapon.stat', 'subType.weapon.skins'])->get();
 
             return response()->json([
                 'status' => 'success',

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\HrStatCharacterPlayer;
 use App\Models\HdCharacterPlayer;
+use App\Models\HdUpgradeCurrency;
+use App\Models\HdWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +19,7 @@ class HrStatCharacterPlayerController extends Controller
             $globalFilter = $request->input('globalFilter', '');
             $sortField = $request->input('sortField', 'id');
 
-            $validSortFields = ['id', 'player_id', 'character_id', 'hitpoints', 'damage', 'defense', 'speed'];
+            $validSortFields = ['id', 'level', 'player_id', 'character_id', 'hitpoints', 'damage', 'defense', 'speed'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -115,7 +117,7 @@ class HrStatCharacterPlayerController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'your does not have this character',
-                    'error_code' => 'CHARACTER_NOT_FOUND',
+                    'error_code' => 'WEAPON_NOT_FOUND',
                     ], 404);
             }
             // Cek apakah data sudah ada
@@ -224,6 +226,76 @@ class HrStatCharacterPlayerController extends Controller
             ], 204);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function upgradeCharacter(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized, please login again',
+                    'error_code' => 'USER_NOT_FOUND',
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'character_id' => 'required|integer|exists:hc_characters,id'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+            $CharacterPlayer = HdCharacterPlayer::where('inventory_id', $user->inventory_r_id)->where('character_id',$request->character_id)->with('character')->first();
+            if (!$CharacterPlayer) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'your does not have this character',
+                    'error_code' => 'WEAPON_NOT_FOUND',
+                    ], 404);
+            }else{
+                $nextLevel =$CharacterPlayer->level + 1;
+                $upgrade = HdUpgradeCurrency::where('category','character')->where('character_id',$request->character_id)->where('level',$nextLevel)->first();
+                if (!$upgrade) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'upgrade price not found.',
+                    ], 404);
+                }
+                $walletGold = HdWallet::where('player_id', $user->id)->where('currency_id', 1)->sum('amount');
+                if ($walletGold >= $upgrade->price) {
+                    $CharacterPlayer->update([
+                        'level' => $nextLevel
+                    ]);
+                    HdWallet::create([
+                        'player_id'   => $user->id,
+                        'currency_id' => 1,
+                        'amount'      => $upgrade->price * -1, // Nilai amount dibuat negatif
+                        'created_by'  => $user->id,
+                        'modified_by' => $user->id,
+                    ]);
+                }else{
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Insufficient gold',
+                    ], 400);
+                }
+
+            }
+
+            return response()->json(['status' => 'success', 'data' => $CharacterPlayer], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }

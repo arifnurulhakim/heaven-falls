@@ -16,6 +16,7 @@ use App\Http\Controllers\HrInventoryPlayersController;
 use App\Http\Controllers\HrSkinCharacterPlayersController;
 use App\Http\Controllers\HrSkinCharacterController;
 use App\Http\Controllers\HcCurrencyController;
+
 use App\Http\Controllers\HrCurrenciesShopController;
 use App\Http\Controllers\HcWeaponController;
 use App\Http\Controllers\HcTypeWeaponController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\HdSkinWeaponPlayersController;
 use App\Http\Controllers\HcStatWeaponController;
 use App\Http\Controllers\HrSkinWeaponController;
 use App\Http\Controllers\HrStatWeaponPlayerController;
+use App\Http\Controllers\HcStatCharacterController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -165,6 +167,7 @@ Route::middleware('otentikasi')->group(function () {
         Route::put('players/{player}', [PlayerController::class, 'update']);
         Route::delete('players/{player}', [PlayerController::class, 'destroy']);
         // LevelController
+        Route::apiResource('currencies', HcCurrencyController::class);
         Route::apiResource('levels', LevelController::class);
         Route::resource('characters', HcCharacterController::class);
         Route::resource('character-roles', HcCharacterRoleController::class);
@@ -176,7 +179,8 @@ Route::middleware('otentikasi')->group(function () {
         Route::resource('skin-character-players', HrSkinCharacterPlayersController::class);
         Route::resource('skin-weapon-players', HrSkinWeaponPlayersController::class);
         Route::resource('weapon-stats', HcStatWeaponController::class);
-        Route::resource('topup', HcTopupController::class);
+        Route::resource('character-stats', HcStatCharacterController::class);
+        // Route::resource('topup', HcTopupController::class);
         Route::resource('currencies-shop', HrCurrenciesShopController::class);
         Route::resource('weapon-types', HcTypeWeaponController::class);
         Route::resource('weapon-sub-types', HcSubTypeWeaponController::class);
@@ -184,11 +188,18 @@ Route::middleware('otentikasi')->group(function () {
         // Route::resource('missions', HdMissionMapController::class);
         // Route::resource('maps', HcMapController::class);
 
+        // Route::controller(HcTopupController::class)->group(function () {
+        //     Route::post('/topup', 'store');
+        //     Route::post('/topup-update/{id}', 'update');
+        //     Route::get('/topup', 'index');
+        //     Route::delete('/topup/{id}', 'destroy');
+        //     Route::get('/topup/{id}', 'show');
+        // });
         Route::controller(HrSkinCharacterController::class)->group(function () {
             Route::post('/skin-characters', 'store');
             Route::post('/skin-characters-update/{id}', 'update');
             Route::get('/skin-characters', 'index');
-            Route::delete('/skin-characters', 'destroy');
+            Route::delete('/skin-characters/{id}', 'destroy');
             Route::get('/skin-characters/{id}', 'show');
         });
         Route::controller(HrSkinWeaponController::class)->group(function () {
@@ -202,7 +213,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/weapons', 'store');
             Route::post('/weapons-update/{id}', 'update');
             Route::get('/weapons', 'index');
-            Route::delete('/weapons', 'destroy');
+            Route::delete('/weapons/{id}', 'destroy');
             Route::get('/weapons/{id}', 'show');
         });
 
@@ -210,14 +221,15 @@ Route::middleware('otentikasi')->group(function () {
         Route::controller(HcMapController::class)->group(function () {
             Route::post('/maps', 'store');
             Route::put('/maps/{id}', 'update');
-            Route::delete('/maps', 'destroy');
+            Route::delete('/maps/{id}', 'destroy');
             Route::get('/maps/{id}', 'show');
         });
         Route::controller(HdMissionMapController::class)->group(function () {
             Route::post('/missions', 'store');
             Route::put('/missions/{id}', 'update');
-            Route::delete('/missions', 'destroy');
+            Route::delete('/missions/{id}', 'destroy');
             Route::get('/missions/{id}', 'show');
+            Route::get('/missions-map/{id}', 'showByMap');
         });
 
         Route::controller(HdKdaController::class)->group(function () {
@@ -228,7 +240,7 @@ Route::middleware('otentikasi')->group(function () {
         Route::controller(AssetsController::class)->group(function () {
             Route::post('/assets', 'store');
             Route::put('/assets/{id}', 'update');
-            Route::delete('/assets', 'destroy');
+            Route::delete('/assets/{id}', 'destroy');
             Route::get('/assets/{id}', 'show');
         });
 
@@ -236,7 +248,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/period-battlepass', 'store');
             Route::post('/period-battlepass-update/{id}', 'update');
             Route::get('/period-battlepass', 'index');
-            Route::delete('/period-battlepass', 'destroy');
+            Route::delete('/period-battlepass/{id}', 'destroy');
             Route::get('/period-battlepass/{id}', 'show');
         });
 
@@ -244,7 +256,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/quest-battlepass', 'store');
             Route::post('/quest-battlepass-update/{id}', 'update');
             Route::get('/quest-battlepass', 'index');
-            Route::delete('/quest-battlepass', 'destroy');
+            Route::delete('/quest-battlepass/{id}', 'destroy');
             Route::get('/quest-battlepass/{id}', 'show');
         });
 
@@ -252,7 +264,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/battlepass-rewards', 'store');
             Route::post('/battlepass-rewards-update/{id}', 'update');
             Route::get('/battlepass-rewards', 'index');
-            Route::delete('/battlepass-rewards', 'destroy');
+            Route::delete('/battlepass-rewards/{id}', 'destroy');
             Route::get('/battlepass-rewards/{id}', 'show');
         });
 
@@ -260,7 +272,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/battlepass', 'store');
             Route::post('/battlepass-update/{id}', 'update');
             // Route::get('/battlepass', 'index');
-            Route::delete('/battlepass', 'destroy');
+            Route::delete('/battlepass/{id}', 'destroy');
             // Route::get('/battlepass/{id}', 'show');
         });
 
@@ -268,7 +280,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/battlepass-quests', 'store');
             Route::post('/battlepass-quests-update/{id}', 'update');
             Route::get('/battlepass-quests', 'index');
-            Route::delete('/battlepass-quests', 'destroy');
+            Route::delete('/battlepass-quests/{id}', 'destroy');
             Route::get('/battlepass-quests/{id}', 'show');
         });
 
@@ -276,7 +288,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/rewards-battlepass', 'store');
             Route::post('/rewards-battlepass-update/{id}', 'update');
             Route::get('/rewards-battlepass', 'index');
-            Route::delete('/rewards-battlepass', 'destroy');
+            Route::delete('/rewards-battlepass/{id}', 'destroy');
             Route::get('/rewards-battlepass/{id}', 'show');
         });
 
@@ -284,7 +296,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/player-battlepass', 'store');
             Route::post('/player-battlepass-update/{id}', 'update');
             Route::get('/player-battlepass', 'index');
-            Route::delete('/player-battlepass', 'destroy');
+            Route::delete('/player-battlepass/{id}', 'destroy');
             Route::get('/player-battlepass/{id}', 'show');
         });
 
@@ -292,7 +304,7 @@ Route::middleware('otentikasi')->group(function () {
             // Route::post('/exp-battlepass', 'store');
             Route::post('/exp-battlepass-update/{id}', 'update');
             Route::get('/exp-battlepass', 'index');
-            Route::delete('/exp-battlepass', 'destroy');
+            Route::delete('/exp-battlepass/{id}', 'destroy');
             Route::get('/exp-battlepass/{id}', 'show');
         });
 
@@ -300,14 +312,14 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/battlepass-purchases', 'store');
             // Route::post('/battlepass-purchases-update/{id}', 'update');
             Route::get('/battlepass-purchases', 'index');
-            Route::delete('/battlepass-purchases', 'destroy');
+            Route::delete('/battlepass-purchases/{id}', 'destroy');
             Route::get('/battlepass-purchases/{id}', 'show');
         });
 
         Route::controller(HrProgressBattlepassController::class)->group(function () {
             Route::post('/progress-battlepass-update/{id}', 'update');
             Route::get('/progress-battlepass', 'index');
-            Route::delete('/progress-battlepass', 'destroy');
+            Route::delete('/progress-battlepass/{id}', 'destroy');
             Route::get('/progress-battlepass/{id}', 'show');
         });
 
@@ -315,7 +327,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/period-subscriptions', 'store');
             Route::post('/period-subscriptions-update/{id}', 'update');
             Route::get('/period-subscriptions', 'index');
-            Route::delete('/period-subscriptions', 'destroy');
+            Route::delete('/period-subscriptions/{id}', 'destroy');
             Route::get('/period-subscriptions/{id}', 'show');
         });
 
@@ -323,7 +335,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/subscription-reward', 'store');
             Route::post('/subscription-reward-update/{id}', 'update');
             Route::get('/subscription-reward', 'index');
-            Route::delete('/subscription-reward', 'destroy');
+            Route::delete('/subscription-reward/{id}', 'destroy');
             Route::get('/subscription-reward/{id}', 'show');
         });
 
@@ -331,7 +343,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/rewards-subscription', 'store');
             Route::post('/rewards-subscription-update/{id}', 'update');
             Route::get('/rewards-subscription', 'index');
-            Route::delete('/rewards-subscription', 'destroy');
+            Route::delete('/rewards-subscription/{id}', 'destroy');
             Route::get('/rewards-subscription/{id}', 'show');
         });
 
@@ -340,7 +352,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/subscriptions', 'store');
             Route::post('/subscriptions-update/{id}', 'update');
             Route::get('/subscriptions', 'index');
-            Route::delete('/subscriptions', 'destroy');
+            Route::delete('/subscriptions/{id}', 'destroy');
             Route::get('/subscriptions/{id}', 'show');
         });
 
@@ -348,7 +360,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/player-subscriptions', 'store');
             Route::post('/player-subscriptions-update/{id}', 'update');
             Route::get('/player-subscriptions', 'index');
-            Route::delete('/player-subscriptions', 'destroy');
+            Route::delete('/player-subscriptions/{id}', 'destroy');
             Route::get('/player-subscriptions/{id}', 'show');
         });
 
@@ -356,14 +368,14 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/exp-subscriptions', 'store');
             Route::post('/exp-subscriptions-update/{id}', 'update');
             Route::get('/exp-subscriptions', 'index');
-            Route::delete('/exp-subscriptions', 'destroy');
+            Route::delete('/exp-subscriptions/{id}', 'destroy');
             Route::get('/exp-subscriptions/{id}', 'show');
         });
 
         Route::controller(HrSubscriptionPurchaseController::class)->group(function () {
             Route::post('/subscription-purchases-update/{id}', 'update');
             Route::get('/subscription-purchases', 'index');
-            Route::delete('/subscription-purchases', 'destroy');
+            Route::delete('/subscription-purchases/{id}', 'destroy');
             Route::get('/subscription-purchases/{id}', 'show');
         });
 
@@ -371,33 +383,33 @@ Route::middleware('otentikasi')->group(function () {
             Route::post('/progress-subscriptions', 'store');
             Route::post('/progress-subscriptions-update/{id}', 'update');
             Route::get('/progress-subscriptions', 'index');
-            Route::delete('/progress-subscriptions', 'destroy');
+            Route::delete('/progress-subscriptions/{id}', 'destroy');
             Route::get('/progress-subscriptions/{id}', 'show');
         });
 
         Route::controller(HrStatCharacterPlayerController::class)->group(function () {
             Route::post('/stat-character-player/{id}', 'update');
             Route::get('/stat-character-player', 'index');
-            Route::delete('/stat-character-player', 'destroy');
+            Route::delete('/stat-character-player/{id}', 'destroy');
             Route::get('/stat-character-player/{id}', 'show');
         });
 
         Route::controller(HcCountriesController::class)->group(function () {
             Route::post('/country', 'store');
             Route::put('/country/{id}', 'update');
-            Route::delete('/country', 'destroy');
+            Route::delete('/country/{id}', 'destroy');
         });
         Route::controller(HcStatesController::class)->group(function () {
             Route::post('/state', 'store');
             Route::put('/state/{id}', 'update');
-            Route::delete('/state', 'destroy');
+            Route::delete('/state/{id}', 'destroy');
         });
 
         Route::controller(HcTopupController::class)->group(function () {
             Route::post('/topup-add', 'store');
             Route::post('/topup-update/{id}', 'update');
             Route::get('/topup', 'index');
-            Route::delete('/topup', 'destroy');
+            Route::delete('/topup/{id}', 'destroy');
             Route::get('/topup/{id}', 'show');
         });
 
@@ -421,11 +433,13 @@ Route::middleware('otentikasi')->group(function () {
 
         Route::get('inventory-skin', [HdSkinCharacterPlayersController::class, 'inventorySkin']);
         Route::get('shop-skin', [HdSkinCharacterPlayersController::class, 'shopSkin']);
+        Route::get('shop-skin-all', [HdSkinCharacterPlayersController::class, 'shopSkinAll']);
         Route::post('purchase-skin', [HdSkinCharacterPlayersController::class, 'purchaseSkin']);
         Route::post('use-skin', [HdSkinCharacterPlayersController::class, 'useSkin']);
 
         Route::get('inventory-skin-weapon', [HdSkinWeaponPlayersController::class, 'inventorySkin']);
         Route::get('shop-skin-weapon', [HdSkinWeaponPlayersController::class, 'shopSkin']);
+        Route::get('shop-skin-weapon-all', [HdSkinWeaponPlayersController::class, 'shopSkinAll']);
         Route::post('purchase-skin-weapon', [HdSkinWeaponPlayersController::class, 'purchaseSkin']);
         Route::post('use-skin-weapon', [HdSkinWeaponPlayersController::class, 'useSkin']);
 
@@ -479,7 +493,7 @@ Route::middleware('otentikasi')->group(function () {
         });
 
 
-        Route::post('/upgrade-stat-character', [HrStatCharacterPlayerController::class, 'store']);
+        Route::post('/upgrade-stat-character', [HrStatCharacterPlayerController::class, 'upgradeCharacter']);
         Route::post('/upgrade-stat-weapon', [HrStatWeaponPlayerController::class, 'upgradeWeapon']);
 
         Route::get('/load', [PlayerController::class, 'load']);

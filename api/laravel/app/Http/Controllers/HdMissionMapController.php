@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\HdMissionMap;
+use App\Models\HcMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -121,6 +122,46 @@ class HdMissionMapController extends Controller
                 'message' => 'Missions created successfully',
                 'data' => $missionsData,
             ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $mission = HdMissionMap::with('map')->find($id);
+            if(!$mission){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'missions not found.',
+                ], 404);
+            }
+
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $mission,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function showByMap($id)
+    {
+        try {
+            $mission = HcMap::with('missions')->find($id);
+            if(!$mission){
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'missions not found.',
+                ], 404);
+            }
+            return response()->json([
+                'status' => 'success',
+                'data' => $mission,
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

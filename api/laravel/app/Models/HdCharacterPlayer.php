@@ -14,6 +14,7 @@ class HdCharacterPlayer extends Model
     protected $fillable = [
         'inventory_id',
         'character_id',
+        'level',
         'created_by',
         'modified_by'
     ];

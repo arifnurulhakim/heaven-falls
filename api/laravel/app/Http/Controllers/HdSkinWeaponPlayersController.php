@@ -132,6 +132,62 @@ class HdSkinWeaponPlayersController extends Controller
             ], 500);
         }
     }
+    public function shopSkinAll(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            // Pastikan user memiliki inventory
+            $inventory = HrInventoryPlayer::find($user->inventory_r_id);
+            if (!$inventory) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Inventory not found',
+                ], 404);
+            }
+
+            // Ambil semua skin senjata yang tersedia
+            $skins = HrSkinWeapon::with('weapon')->get();
+
+            // Ambil daftar skin senjata yang dimiliki oleh player berdasarkan inventory
+            $ownedSkinIds = HdSkinWeaponPlayer::where('inventory_id', $user->inventory_r_id)
+                ->pluck('skin_id')
+                ->toArray();
+
+            // Ambil level senjata player jika ada
+            $weaponPlayer = HdWeaponPlayer::where('inventory_id', $user->inventory_r_id)->first();
+            $playerWeaponLevel = $weaponPlayer->level ?? 0; // Default level 0 jika tidak ada senjata
+
+            // Tambahkan properti `owned` dan `locked` ke setiap skin
+            $skins = $skins->map(function ($skin) use ($ownedSkinIds, $playerWeaponLevel) {
+                return [
+                    'id' => $skin->id,
+                    'weapon_id' => $skin->weapon_id,
+                    'name_skin' => $skin->name_skin,
+                    'level_reach' => $skin->level_reach,
+                    'code_skin' => $skin->code_skin,
+                    'image_skin' => $skin->image_skin,
+                    'point_price' => $skin->point_price,
+                    'created_by' => $skin->created_by,
+                    'modified_by' => $skin->modified_by,
+                    'weapon' => $skin->weapon, // Pastikan relasi `weapon` terisi
+                    'owned' => in_array($skin->id, $ownedSkinIds),
+                    'locked' => $playerWeaponLevel < $skin->level, // Terkunci jika level kurang
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $skins,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+                'error_detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function purchaseSkin(Request $request)
     {
         try {
