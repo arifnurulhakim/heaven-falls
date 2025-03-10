@@ -105,18 +105,18 @@ class PlayerController extends Controller
             $player = Auth::user();
             $token = JWTAuth::fromUser($player);
             $lastSeen = HrPlayerLastSeen::where('player_id', $player->id)->first();
-                if ($lastSeen) {
-                    // Jika data sudah ada, update last_seen menjadi null
-                    $lastSeen->update(['last_seen' => null]);
-                } else {
-                    // Jika data belum ada, buat entri baru dengan last_seen = null
-                    HrPlayerLastSeen::create([
-                        'player_id' => $player->id,
-                        'last_seen' => null,
-                    ]);
-                }
+            if ($lastSeen) {
+                // Jika data sudah ada, update last_seen menjadi null
+                $lastSeen->update(['last_seen' => null]);
+            } else {
+                // Jika data belum ada, buat entri baru dengan last_seen = null
+                HrPlayerLastSeen::create([
+                    'player_id' => $player->id,
+                    'last_seen' => null,
+                ]);
+            }
 
-                $this->pushLastSeenEvent();
+            $this->pushLastSeenEvent();
 
 
             return response()->json([
@@ -138,8 +138,9 @@ class PlayerController extends Controller
             ->select(
                 'hr_player_last_seens.player_id',
                 'hr_player_last_seens.last_seen',
-                'hd_players.username',
-                DB::raw("CASE WHEN hf_hr_player_last_seens.last_seen IS NULL THEN 'online' ELSE 'offline' END as status")
+                'hd_players.username AS player_name',
+                DB::raw("IF(hf_hr_player_last_seens.player_id IS NULL, 'offline', IF(hf_hr_player_last_seens.last_seen IS NULL, 'online', 'offline')) AS status")
+
             )
             ->get();
 
@@ -154,26 +155,25 @@ class PlayerController extends Controller
         $player = Auth::user();
 
         $lastSeen = HrPlayerLastSeen::where('player_id', $player->id)->first();
-                if ($lastSeen) {
-                    // Jika data sudah ada, update last_seen menjadi null
-                    $lastSeen->update(['last_seen' => now()]);
-                } else {
-                    // Jika data belum ada, buat entri baru dengan last_seen = null
-                    HrPlayerLastSeen::create([
-                        'player_id' => $player->id,
-                        'last_seen' => now(),
-                    ]);
-                }
-                $this->pushLastSeenEvent();
-                 return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'id' => $player->id,
-                    'username' => $player->username,
-                    'last_seen' =>now()
-                ],
-            ], 200);
-
+        if ($lastSeen) {
+            // Jika data sudah ada, update last_seen menjadi null
+            $lastSeen->update(['last_seen' => now()]);
+        } else {
+            // Jika data belum ada, buat entri baru dengan last_seen = null
+            HrPlayerLastSeen::create([
+                'player_id' => $player->id,
+                'last_seen' => now(),
+            ]);
+        }
+        $this->pushLastSeenEvent();
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $player->id,
+                'username' => $player->username,
+                'last_seen' => now()
+            ],
+        ], 200);
     }
     public function updateprofile(Request $request)
     {
@@ -411,13 +411,14 @@ class PlayerController extends Controller
             // Get user level details
             $level = HrLevelPlayer::where('hr_level_players.id', $user->level_r_id)
                 ->leftJoin('hc_levels', 'hr_level_players.level_id', '=', 'hc_levels.id')
-                ->select('hr_level_players.id', 'hr_level_players.level_id','hr_level_players.exp',  'hc_levels.name as level_name') // Include relevant fields
+                ->select('hr_level_players.id', 'hr_level_players.level_id', 'hr_level_players.exp',  'hc_levels.name as level_name') // Include relevant fields
                 ->first();
-                $wallet = HcCurrency::leftJoin('hd_wallets', function($join) use ($user) {
-                    $join->on('hc_currencies.id', '=', 'hd_wallets.currency_id')
-                        ->where('hd_wallets.player_id', $user->id);
-                })
-                ->select('hc_currencies.name as currency_name',
+            $wallet = HcCurrency::leftJoin('hd_wallets', function ($join) use ($user) {
+                $join->on('hc_currencies.id', '=', 'hd_wallets.currency_id')
+                    ->where('hd_wallets.player_id', $user->id);
+            })
+                ->select(
+                    'hc_currencies.name as currency_name',
                     \DB::raw('COALESCE(SUM(hf_hd_wallets.amount), 0) as amount')
                 )
                 ->groupBy('hc_currencies.name')
@@ -432,10 +433,10 @@ class PlayerController extends Controller
             }
 
             // Get skin character data
-            $skinCharacter = HdSkinCharacterPlayer::where('inventory_id',$user->inventory_r_id)->get();
+            $skinCharacter = HdSkinCharacterPlayer::where('inventory_id', $user->inventory_r_id)->get();
             $periodBp = HrPeriodBattlepass::where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
-            ->first();
+                ->where('end_date', '>=', now())
+                ->first();
 
             if ($periodBp) {
                 $battlepassPurchase = HrBattlepassPurchase::where('player_id', $user->id)
@@ -457,8 +458,8 @@ class PlayerController extends Controller
                 $battlepassLvl = null;
             }
             $periodSub = HrPeriodSubscription::where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
-            ->first();
+                ->where('end_date', '>=', now())
+                ->first();
 
             if ($periodSub) {
                 $subscriptionPurchase = HrSubscriptionPurchase::where('player_id', $user->id)
@@ -480,21 +481,21 @@ class PlayerController extends Controller
                 $subscriptionLvl = null;
             }
 
-            $refferer = HrReferrerCode::where('player_id',$user->id)->first();
+            $refferer = HrReferrerCode::where('player_id', $user->id)->first();
             // $battlepassLevel = HdSubscription::where('period_battlepass_id', $period->id)->first();
 
             // Construct the response data
             $responseData = [
                 'player' => $user,
                 'level' => $level,
-                'refferer_code'=>$refferer->code,
+                'refferer_code' => $refferer->code,
                 'wallet' => $wallet,
-                'battlepass'=>[
+                'battlepass' => [
                     'purchase' => $battlepassPurchase ?? false,
                     'exp' => $battlepassExp,
                     'level' => $battlepassLvl,
                 ],
-                'subscription'=>[
+                'subscription' => [
                     'purchase' => $subscriptionPurchase ?? false,
                     'exp' => $subscriptionExp,
                     'level' => $subscriptionLvl,
@@ -513,7 +514,6 @@ class PlayerController extends Controller
                 'status' => 'success',
                 'data' => $responseData,
             ]);
-
         } catch (\Exception $e) {
             // Return error response with exception message
             return response()->json(['error' => $e->getMessage()], 500);
@@ -566,10 +566,10 @@ class PlayerController extends Controller
             $query = Player::query();
 
             if ($globalFilter) {
-                $query->where(function($query) use ($globalFilter) {
+                $query->where(function ($query) use ($globalFilter) {
                     $query->where('username', 'like', "%{$globalFilter}%")
-                          ->orWhere('email', 'like', "%{$globalFilter}%")
-                          ->orWhere('mobile_number', 'like', "%{$globalFilter}%");
+                        ->orWhere('email', 'like', "%{$globalFilter}%")
+                        ->orWhere('mobile_number', 'like', "%{$globalFilter}%");
                 });
             }
 
@@ -662,7 +662,7 @@ class PlayerController extends Controller
                 ], 422);
             }
             $level = HrLevelPlayer::create([
-                'level_id' =>"1",
+                'level_id' => "1",
             ]);
             $inventory = HrInventoryPlayer::create();
             // dd($inventory);
@@ -678,15 +678,15 @@ class PlayerController extends Controller
                 'players_mac_address' => $request->players_mac_address,
                 'players_os_type' => $request->players_os_type,
                 'picture' => $request->picture,
-                'level_r_id'=> $level->id,
+                'level_r_id' => $level->id,
                 'inventory_r_id' => $inventory->id,
                 // 'weapon_r_id' => $weapon->id,
             ]);
             $getInventory = HrInventoryPlayer::find($inventory->id);
             $weapon = HdWeaponPlayer::create([
-                    'inventory_id' => $getInventory->id,
-                    'weapon_id' => $getInventory->weapon_primary_r_id,
-                ]);
+                'inventory_id' => $getInventory->id,
+                'weapon_id' => $getInventory->weapon_primary_r_id,
+            ]);
 
             $character = HdCharacterPlayer::create([
                 'inventory_id' => $getInventory->id,
@@ -695,18 +695,18 @@ class PlayerController extends Controller
 
             $player->makeHidden(['password']);
             $code = strtoupper(Str::random(3)) . rand(100, 999);
-            $refferer= HrReferrerCode::create([
-                'code'=>$code,
-                'player_id'=>$player->id,
-                'modified_by'=>$player->id,
-                'created_by'=>$player->id,
+            $refferer = HrReferrerCode::create([
+                'code' => $code,
+                'player_id' => $player->id,
+                'modified_by' => $player->id,
+                'created_by' => $player->id,
             ]);
 
             return response()->json([
                 'status' => 'success',
                 'data' => $player,
                 'level_player' => $level,
-                'inventory_player' =>$inventory
+                'inventory_player' => $inventory
             ], 201);
         } catch (\Exception $e) {
             // Rollback any changes if needed
@@ -723,7 +723,7 @@ class PlayerController extends Controller
         try {
 
             $player = Player::find($id);
-            if(!$player){
+            if (!$player) {
                 return response()->json(['status' => 'error', 'message' => 'Player not found', 'error_code' => 'NOT_FOUND'], 404);
             }
 
@@ -912,8 +912,9 @@ class PlayerController extends Controller
         }
     }
 
-    public function load(){
-        try{
+    public function load()
+    {
+        try {
             $maps = HcMap::with(['missions.rewards'])->get();
             $characterRoles = HcCharacterRole::with(['characters.stat', 'characters.skins'])->get();
             $typeWeapon = HcTypeWeapon::with(['subType.weapon.stat', 'subType.weapon.skins'])->get();
@@ -926,9 +927,6 @@ class PlayerController extends Controller
                     'type_weapon' => $typeWeapon,
                 ]
             ], 200);
-
-
-
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
