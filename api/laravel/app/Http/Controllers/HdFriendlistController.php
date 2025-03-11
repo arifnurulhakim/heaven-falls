@@ -67,7 +67,7 @@ class HdFriendlistController extends Controller
                 ->select(
                     'hd_friend_lists.*',
                     'hd_players.username as friend_name',
-                    DB::raw("CASE WHEN hf_hr_player_last_seens.player_id IS NULL THEN 'offline' ELSE 'online' END as status")
+                    DB::raw("IF(hf_hr_player_last_seens.player_id IS NULL, 'offline', IF(hf_hr_player_last_seens.last_seen IS NULL, 'online', 'offline')) AS status")
                 );
 
 
