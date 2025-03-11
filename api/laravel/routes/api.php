@@ -215,6 +215,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::get('/weapons', 'index');
             Route::delete('/weapons/{id}', 'destroy');
             Route::get('/weapons/{id}', 'show');
+            Route::get('/weapons/{type}/{subType}', 'showByType');
         });
 
 

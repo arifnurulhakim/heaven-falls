@@ -139,7 +139,7 @@ class HcWeaponController extends Controller
     public function show($id)
     {
         try {
-            $weapon = HcWeapon::with('currency')->find($id);
+            $weapon = HcWeapon::with('subType.type')->find($id);
             if(!$weapon){
                 return response()->json([
                     'status' => 'error',
@@ -156,7 +156,34 @@ class HcWeaponController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    public function showByType($type, $subType)
+    {
+        try {
+            $weapon = HcWeapon::with('subType.type')
+                ->whereHas('subType.type', function ($query) use ($type) {
+                    $query->where('id', $type);
+                })
+                ->where('weapon_r_sub_type', $subType)
+                ->first(); // Ambil satu hasil yang cocok
 
+            if (!$weapon) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Weapon not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $weapon,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function update(Request $request, $id)
     {
         try {

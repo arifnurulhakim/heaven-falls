@@ -152,15 +152,50 @@ class HrBattlepassPurchaseController extends Controller
                 ], 401);
             }
 
-            $purchase = HrBattlepassPurchase::with(['player', 'battlepass'])->where('player_id',$user->id)->first();
+            // Cek apakah user memiliki pembelian battlepass
+            $purchase = HrBattlepassPurchase::with(['player', 'battlepass'])
+                ->where('player_id', $user->id)
+                ->first();
 
             if (!$purchase) {
-                return response()->json(['status' => 'error', 'message' => 'Battlepass purchase not found.'], 404);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Battlepass purchase not found.',
+                ], 404);
             }
 
-            return response()->json(['status' => 'success', 'data' => $purchase], 200);
+            // Cari periode yang sedang berlangsung
+            $currentDate = now();
+            $currentPeriod = HrPeriodBattlepass::where('start_date', '<=', $currentDate)
+                ->where('end_date', '>=', $currentDate)
+                ->first();
+
+            if (!$currentPeriod) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No active battlepass period found.',
+                ], 404);
+            }
+
+            // Cek apakah battlepass masih berlaku
+            if ($purchase->purchased_at <= $currentPeriod->start_date || $purchase->purchased_at >= $currentPeriod->end_date) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Battlepass premium has expired.',
+                ], 403);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $purchase,
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred.',
+                'error_code' => 'INTERNAL_ERROR',
+                'error' => $e->getMessage(), // Debugging purpose (remove in production)
+            ], 500);
         }
     }
     public function show($id)

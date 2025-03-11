@@ -141,11 +141,26 @@ class HdBattlepassController extends Controller
                 ], 401);
             }
 
-            // Ambil semua data Battlepass dengan relasi Rewards dan Reward Details
+            // Cari periode yang sedang berlangsung
+            $currentDate = now();
+            $currentPeriod = HrPeriodBattlepass::where('start_date', '<=', $currentDate)
+                ->where('end_date', '>=', $currentDate)
+                ->first();
+
+            if (!$currentPeriod) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No active battlepass period found.',
+                    'total_exp' => 0,
+                    'data' => [],
+                ], 200);
+            }
+
+            // Ambil semua data Battlepass berdasarkan periode saat ini
             $battlepasses = HdBattlepass::with([
-                'rewards',        // Relasi ke HdBattlepassRewards
-                'rewards.reward', // Relasi ke HcBattlepassReward
-            ])->get();
+                'rewards',
+                'rewards.reward',
+            ])->where('period_battlepass_id', $currentPeriod->id)->get();
 
             // Hitung total exp dari player
             $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
@@ -156,19 +171,13 @@ class HdBattlepassController extends Controller
                     ->where('battlepass_id', $battlepass->id)
                     ->first();
 
-                $period = HrPeriodBattlepass::where('id', $battlepass->period_battlepass_id)->first();
+                // Ambil data pembelian battlepass player dalam periode yang sedang berlangsung
+                $purchase = HrBattlepassPurchase::where('player_id', $user->id)
+                    ->where('purchased_at', '>=', $currentPeriod->start_date)
+                    ->where('purchased_at', '<=', $currentPeriod->end_date)
+                    ->first();
 
-                if ($period) {
-                    // Ambil data pembelian battlepass player dengan kondisi purchased_at dalam rentang periode
-                    $purchase = HrBattlepassPurchase::where('player_id', $user->id)
-                        ->where('purchased_at', '>=', $period->start_date)
-                        ->where('purchased_at', '<=', $period->end_date)
-                        ->first();
-
-                    $battlepass->isPurchased = $purchase ? true : false;
-                } else {
-                    $battlepass->isPurchased = false;
-                }
+                $battlepass->isPurchased = $purchase ? true : false;
 
                 // Cek apakah battlepass terkunci atau tidak
                 $battlepass->isLock = $totalExp < $battlepass->reach_exp;
