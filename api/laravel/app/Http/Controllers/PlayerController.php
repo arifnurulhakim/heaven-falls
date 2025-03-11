@@ -135,7 +135,7 @@ class PlayerController extends Controller
     {
         $lastSeenData = HrPlayerLastSeen::join('hd_players', 'hr_player_last_seens.player_id', '=', 'hd_players.id')
             ->select(
-                'hr_player_last_seens.player_id',
+                'hr_player_last_seens.player_id AS friend_id',
                 'hr_player_last_seens.last_seen',
                 'hd_players.username AS player_name',
                 DB::raw("IF(hf_hr_player_last_seens.player_id IS NULL, 'offline', IF(hf_hr_player_last_seens.last_seen IS NULL, 'online', 'offline')) AS status")
