@@ -128,95 +128,303 @@ class HdBattlepassController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    // public function showPlayer()
+    // {
+    //     try {
+    //         // Autentikasi user
+    //         $user = Auth::user();
+    //         if (!$user) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Unauthorized, please login again',
+    //                 'error_code' => 'USER_NOT_FOUND',
+    //             ], 401);
+    //         }
+
+    //         // Cari periode yang sedang berlangsung
+    //         $currentDate = now();
+    //         $currentPeriod = HrPeriodBattlepass::where('start_date', '<=', $currentDate)
+    //             ->where('end_date', '>=', $currentDate)
+    //             ->first();
+
+    //         if (!$currentPeriod) {
+    //             return response()->json([
+    //                 'status' => 'success',
+    //                 'message' => 'No active battlepass period found.',
+    //                 'total_exp' => 0,
+    //                 'data' => [],
+    //             ], 200);
+    //         }
+
+    //         // Ambil semua data Battlepass berdasarkan periode saat ini
+    //         $battlepasses = HdBattlepass::with([
+    //             'rewards',
+    //             'rewards.reward',
+    //         ])->where('period_battlepass_id', $currentPeriod->id)->get();
+
+    //         // Hitung total exp dari player
+    //         $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
+
+    //         // Tambahkan properti isLock dan claimed berdasarkan kondisi exp dan klaim
+    //         foreach ($battlepasses as $battlepass) {
+    //             $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
+    //                 ->where('battlepass_id', $battlepass->id)
+    //                 ->first();
+
+    //             // Ambil data pembelian battlepass player dalam periode yang sedang berlangsung
+    //             $purchase = HrBattlepassPurchase::where('player_id', $user->id)
+    //                 ->where('purchased_at', '>=', $currentPeriod->start_date)
+    //                 ->where('purchased_at', '<=', $currentPeriod->end_date)
+    //                 ->first();
+
+    //             $battlepass->isPurchased = $purchase ? true : false;
+
+    //             // Cek apakah battlepass terkunci atau tidak
+    //             $battlepass->isLock = $totalExp < $battlepass->reach_exp;
+
+    //             // Tambahkan pengecekan tipe reward
+    //             $isPremiumReward = $battlepass->rewards->some(function ($reward) {
+    //                 return $reward->type === 'premium';
+    //             });
+
+    //             if ($isPremiumReward && !$battlepass->isPurchased) {
+    //                 $battlepass->isLock = true;
+    //             }
+
+    //             // Tambahkan properti claimed
+    //             $battlepass->isClaim = $playerBattlepass ? true : false;
+    //         }
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'total_exp' => $totalExp,
+    //             'end_date_session' => $currentPeriod->end_date,
+    //             'data' => $battlepasses,
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'An error occurred.',
+    //             'error_code' => 'INTERNAL_ERROR',
+    //             'error' => $e->getMessage(), // Debugging purpose (remove in production)
+    //         ], 500);
+    //     }
+    // }
     public function showPlayer()
-    {
-        try {
-            // Autentikasi user
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Unauthorized, please login again',
-                    'error_code' => 'USER_NOT_FOUND',
-                ], 401);
-            }
-
-            // Cari periode yang sedang berlangsung
-            $currentDate = now();
-            $currentPeriod = HrPeriodBattlepass::where('start_date', '<=', $currentDate)
-                ->where('end_date', '>=', $currentDate)
-                ->first();
-
-            if (!$currentPeriod) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'No active battlepass period found.',
-                    'total_exp' => 0,
-                    'data' => [],
-                ], 200);
-            }
-
-            // Ambil semua data Battlepass berdasarkan periode saat ini
-            $battlepasses = HdBattlepass::with([
-                'rewards',
-                'rewards.reward',
-            ])->where('period_battlepass_id', $currentPeriod->id)->get();
-
-            // Hitung total exp dari player
-            $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
-
-            // Tambahkan properti isLock dan claimed berdasarkan kondisi exp dan klaim
-            foreach ($battlepasses as $battlepass) {
-                $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
-                    ->where('battlepass_id', $battlepass->id)
-                    ->first();
-
-                // Ambil data pembelian battlepass player dalam periode yang sedang berlangsung
-                $purchase = HrBattlepassPurchase::where('player_id', $user->id)
-                    ->where('purchased_at', '>=', $currentPeriod->start_date)
-                    ->where('purchased_at', '<=', $currentPeriod->end_date)
-                    ->first();
-
-                $battlepass->isPurchased = $purchase ? true : false;
-
-                // Cek apakah battlepass terkunci atau tidak
-                $battlepass->isLock = $totalExp < $battlepass->reach_exp;
-
-                // Tambahkan pengecekan tipe reward
-                $isPremiumReward = $battlepass->rewards->some(function ($reward) {
-                    return $reward->type === 'premium';
-                });
-
-                if ($isPremiumReward && !$battlepass->isPurchased) {
-                    $battlepass->isLock = true;
-                }
-
-                // Tambahkan properti claimed
-                $battlepass->isClaim = $playerBattlepass ? true : false;
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'total_exp' => $totalExp,
-                'end_date_session' => $currentPeriod->end_date,
-                'data' => $battlepasses,
-            ], 200);
-        } catch (\Exception $e) {
+{
+    try {
+        $user = Auth::user();
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'An error occurred.',
-                'error_code' => 'INTERNAL_ERROR',
-                'error' => $e->getMessage(), // Debugging purpose (remove in production)
-            ], 500);
+                'message' => 'Unauthorized, please login again',
+                'error_code' => 'USER_NOT_FOUND',
+            ], 401);
         }
+
+        $currentDate = now();
+        $currentPeriod = HrPeriodBattlepass::where('start_date', '<=', $currentDate)
+            ->where('end_date', '>=', $currentDate)
+            ->first();
+
+        if (!$currentPeriod) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No active battlepass period found.',
+                'total_exp' => 0,
+                'data' => [],
+            ], 200);
+        }
+
+        $battlepasses = HdBattlepass::with(['rewards', 'rewards.reward'])
+            ->where('period_battlepass_id', $currentPeriod->id)
+            ->get();
+
+        $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
+
+        foreach ($battlepasses as $battlepass) {
+            $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
+                ->where('battlepass_id', $battlepass->id)
+                ->first();
+
+            $purchase = HrBattlepassPurchase::where('player_id', $user->id)
+                ->where('purchased_at', '>=', $currentPeriod->start_date)
+                ->where('purchased_at', '<=', $currentPeriod->end_date)
+                ->first();
+
+            $battlepass->isPurchased = $purchase ? true : false;
+            $battlepass->isLock = $totalExp < $battlepass->reach_exp;
+
+            $battlepass->rewards->transform(function ($reward) use ($playerBattlepass, $battlepass) {
+                if (!$playerBattlepass) {
+                    $reward->isClaim = false;
+                } elseif ($reward->reward->type === 'free') {
+                    $reward->isClaim = (bool) $playerBattlepass->status_claimed;
+                } elseif ($reward->reward->type === 'premium') {
+                    $reward->isClaim = $battlepass->isPurchased ? (bool) $playerBattlepass->status_claimed_premium : false;
+                } else {
+                    $reward->isClaim = false;
+                }
+                return $reward;
+            });
+            
+            $isPremiumReward = $battlepass->rewards->some(fn($reward) => $reward->type === 'premium');
+            if ($isPremiumReward && !$battlepass->isPurchased) {
+                $battlepass->isLock = true;
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'total_exp' => $totalExp,
+            'end_date_session' => $currentPeriod->end_date,
+            'data' => $battlepasses,
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'An error occurred.',
+            'error_code' => 'INTERNAL_ERROR',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
+    // public function claim(Request $request)
+    // {
+    //     try {
+    //         $validator = Validator::make($request->all(), [
+    //             'reward_id' => 'required|exists:hc_battlepass_rewards,id',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Validation error',
+    //                 'error_code' => 'VALIDATION_ERROR',
+    //                 'errors' => $validator->errors()
+    //             ], 422);
+    //         }
+
+    //         $user = Auth::user();
+    //         if (!$user) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Unauthorized, please login again',
+    //                 'error_code' => 'USER_NOT_FOUND',
+    //             ], 401);
+    //         }
+
+    //         $battlepass = HdBattlepass::select('hd_battlepass.*','hc_battlepass_rewards.category','hc_battlepass_rewards.value') // Pilih kolom dari HdBattlepass
+    //         ->join('hd_battlepass_rewards', 'hd_battlepass.id', '=', 'hd_battlepass_rewards.battlepass_id')
+    //         ->join('hc_battlepass_rewards', 'hd_battlepass_rewards.reward_id', '=', 'hc_battlepass_rewards.id')
+    //         ->where('hc_battlepass_rewards.id', $request->reward_id)
+    //         ->first();
+    //         // dd( $battlepass );
+    //         $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
+
+    //         // foreach ($battlepass as $battlepass) {
+    //             $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
+    //                 ->where('battlepass_id', $battlepass->id)
+    //                 ->first();
+
+    //             $period = HrPeriodBattlepass::where('id', $battlepass->period_battlepass_id)->first();
+
+    //             if ($period) {
+    //                 $purchase = HrBattlepassPurchase::where('player_id', $user->id)
+    //                     ->where('purchased_at', '>=', $period->start_date)
+    //                     ->where('purchased_at', '<=', $period->end_date)
+    //                     ->first();
+
+    //                 $battlepass->isPurchased = $purchase ? true : false;
+    //             } else {
+    //                 $battlepass->isPurchased = false;
+    //             }
+
+    //             // Cek apakah battlepass terkunci atau tidak
+    //             $battlepass->isLock = $totalExp < $battlepass->reach_exp;
+
+    //             // Tambahkan pengecekan tipe reward
+    //             $isPremiumReward = $battlepass->rewards->some(function ($reward) {
+    //                 return $reward->type === 'premium';
+    //             });
+
+    //             if ($isPremiumReward && !$battlepass->isPurchased) {
+    //                 $battlepass->isLock = true;
+    //             }
+
+    //             // Tambahkan properti claimed
+    //             $battlepass->isClaim = $playerBattlepass ? true : false;
+
+    //             // Jika battlepass terkunci, berikan response "Can't claim reward"
+    //             if ($battlepass->isLock == true) {
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'message' => 'Can\'t claim reward',
+    //                     'error_code' => 'REWARD_LOCKED',
+    //                 ], 403);
+    //             }
+    //             if ($battlepass->isClaim == true) {
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'message' => 'already claimed',
+    //                     'error_code' => 'REWARD_CLAIMED',
+    //                 ], 403);
+    //             }
+
+
+    //             if ($battlepass->isLock === false) {
+    //                 if($battlepass->category =='coin'){
+    //                     $wallet = HdWallet::create([
+    //                         'player_id' => $user->id,
+    //                         'amount' => $battlepass->value,
+    //                         'currency_id' => 1,
+    //                         'category'=> 'reward',
+    //                         'label'=>'reward battlepass',
+    //                         'created_by'=> $user->id,
+    //                         'modified_by'=> $user->id,
+    //                         ]);
+    //                 }else{
+    //                     return response()->json([
+    //                         'status' => 'error',
+    //                         'message' => 'claim item coming soon',
+    //                         'error_code' => 'CLAIM_ITEM_ERROR',
+    //                     ], 403);
+    //                 }
+    //                 $claimedData=HrPlayerBattlepass::where('player_id',$user->id)->where('battlepass_id',$battlepass->id)->first();
+    //                 if(!$claimedData){
+    //                     $type=
+    //                     $claimedData=HrPlayerBattlepass::create([
+    //                         'player_id' => $user->id,
+    //                         'battlepass_id' => $battlepass->id,
+    //                         'status_claimed' => true, // Simpan waktu klaim
+    
+    //                     ]);
+    //                 }else
+                   
+
+    //             }
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'data' => $claimedData,
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         dd($e);
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'An error occurred.',
+    //             'error_code' => 'INTERNAL_ERROR',
+    //             'error' => $e->getMessage(), // Debugging purpose (remove in production)
+    //         ], 500);
+    //     }
+    // }
     public function claim(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
-                'reward_id' => 'required|exists:hc_battlepass_rewards,id',
+                'rewards_id' => 'required|exists:hd_battlepass_rewards,id',
             ]);
-
+    
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
@@ -225,7 +433,7 @@ class HdBattlepassController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-
+    
             $user = Auth::user();
             if (!$user) {
                 return response()->json([
@@ -234,108 +442,106 @@ class HdBattlepassController extends Controller
                     'error_code' => 'USER_NOT_FOUND',
                 ], 401);
             }
-
-            $battlepass = HdBattlepass::select('hd_battlepass.*','hc_battlepass_rewards.category','hc_battlepass_rewards.value') // Pilih kolom dari HdBattlepass
-            ->join('hd_battlepass_rewards', 'hd_battlepass.id', '=', 'hd_battlepass_rewards.battlepass_id')
-            ->join('hc_battlepass_rewards', 'hd_battlepass_rewards.reward_id', '=', 'hc_battlepass_rewards.id')
-            ->where('hc_battlepass_rewards.id', $request->reward_id)
-            ->first();
-            // dd( $battlepass );
+    
+            $battlepass = HdBattlepass::select('hd_battlepass.*', 'hc_battlepass_rewards.category', 'hc_battlepass_rewards.value', 'hc_battlepass_rewards.type')
+                ->join('hd_battlepass_rewards', 'hd_battlepass.id', '=', 'hd_battlepass_rewards.battlepass_id')
+                ->join('hc_battlepass_rewards', 'hd_battlepass_rewards.reward_id', '=', 'hc_battlepass_rewards.id')
+                ->where('hd_battlepass_rewards.id', $request->rewards_id)
+                ->first();
+    
             $totalExp = HrExpBattlepass::where('player_id', $user->id)->sum('exp');
-
-            // foreach ($battlepass as $battlepass) {
-                $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
-                    ->where('battlepass_id', $battlepass->id)
+    
+            $playerBattlepass = HrPlayerBattlepass::where('player_id', $user->id)
+                ->where('battlepass_id', $battlepass->id)
+                ->first();
+    
+            $period = HrPeriodBattlepass::where('id', $battlepass->period_battlepass_id)->first();
+    
+            if ($period) {
+                $purchase = HrBattlepassPurchase::where('player_id', $user->id)
+                    ->where('purchased_at', '>=', $period->start_date)
+                    ->where('purchased_at', '<=', $period->end_date)
                     ->first();
-
-                $period = HrPeriodBattlepass::where('id', $battlepass->period_battlepass_id)->first();
-
-                if ($period) {
-                    $purchase = HrBattlepassPurchase::where('player_id', $user->id)
-                        ->where('purchased_at', '>=', $period->start_date)
-                        ->where('purchased_at', '<=', $period->end_date)
-                        ->first();
-
-                    $battlepass->isPurchased = $purchase ? true : false;
-                } else {
-                    $battlepass->isPurchased = false;
-                }
-
-                // Cek apakah battlepass terkunci atau tidak
-                $battlepass->isLock = $totalExp < $battlepass->reach_exp;
-
-                // Tambahkan pengecekan tipe reward
-                $isPremiumReward = $battlepass->rewards->some(function ($reward) {
-                    return $reward->type === 'premium';
-                });
-
-                if ($isPremiumReward && !$battlepass->isPurchased) {
-                    $battlepass->isLock = true;
-                }
-
-                // Tambahkan properti claimed
-                $battlepass->isClaim = $playerBattlepass ? true : false;
-
-                // Jika battlepass terkunci, berikan response "Can't claim reward"
-                if ($battlepass->isLock == true) {
+                $battlepass->isPurchased = $purchase ? true : false;
+            } else {
+                $battlepass->isPurchased = false;
+            }
+    
+            $battlepass->isLock = $totalExp < $battlepass->reach_exp;
+    
+            if ($battlepass->isLock) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Can\'t claim reward',
+                    'error_code' => 'REWARD_LOCKED',
+                ], 403);
+            }
+    
+            if ($playerBattlepass) {
+                if ($battlepass->type === 'free' && $playerBattlepass->status_claimed === 1) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Can\'t claim reward',
-                        'error_code' => 'REWARD_LOCKED',
-                    ], 403);
-                }
-                if ($battlepass->isClaim == true) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'already claimed',
+                        'message' => 'Already claimed',
                         'error_code' => 'REWARD_CLAIMED',
                     ], 403);
                 }
-
-// dd($battlepass);
-                // Jika tidak terkunci, simpan data di HrPlayerBattlepass
-                if ($battlepass->isLock === false) {
-                    if($battlepass->category =='coin'){
-                        $wallet = HdWallet::create([
-                            'player_id' => $user->id,
-                            'amount' => $battlepass->value,
-                            'currency_id' => 1,
-                            'category'=> 'reward',
-                            'label'=>'reward battlepass',
-                            'created_by'=> $user->id,
-                            'modified_by'=> $user->id,
-                            ]);
-                    }else{
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'claim item coming soon',
-                            'error_code' => 'CLAIM_ITEM_ERROR',
-                        ], 403);
-                    }
-                    $claimedData=HrPlayerBattlepass::create([
-                        'player_id' => $user->id,
-                        'battlepass_id' => $battlepass->id,
-                        'status_claimed' => true, // Simpan waktu klaim
-
-                    ]);
-
+                if ($battlepass->type === 'premium' && $playerBattlepass->status_claimed_premium===1) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Already claimed',
+                        'error_code' => 'REWARD_CLAIMED',
+                    ], 403);
                 }
-
+            }
+    
+            if ($battlepass->category === 'coin') {
+                HdWallet::create([
+                    'player_id' => $user->id,
+                    'amount' => $battlepass->value,
+                    'currency_id' => 1,
+                    'category' => 'reward',
+                    'label' => 'reward battlepass',
+                    'created_by' => $user->id,
+                    'modified_by' => $user->id,
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Claim item coming soon',
+                    'error_code' => 'CLAIM_ITEM_ERROR',
+                ], 403);
+            }
+    
+            if (!$playerBattlepass) {
+                $claimedData = HrPlayerBattlepass::create([
+                    'player_id' => $user->id,
+                    'battlepass_id' => $battlepass->id,
+                    'status_claimed' => $battlepass->type === 'free' ? 1 : 0,
+                    'status_claimed_premium' => $battlepass->type === 'premium' ? 1 : 0,
+                ]);
+            } else {
+                if ($battlepass->type === 'free') {
+                    $playerBattlepass->update(['status_claimed' => 1]);
+                } elseif ($battlepass->type === 'premium') {
+                    $playerBattlepass->update(['status_claimed_premium' => 1]);
+                }
+                $claimedData = $playerBattlepass;
+            }
+    
             return response()->json([
                 'status' => 'success',
                 'data' => $claimedData,
             ], 200);
         } catch (\Exception $e) {
-            dd($e);
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred.',
                 'error_code' => 'INTERNAL_ERROR',
-                'error' => $e->getMessage(), // Debugging purpose (remove in production)
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
-
+    
 
     public function update(Request $request, $id)
     {

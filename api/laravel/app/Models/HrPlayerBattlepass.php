@@ -15,6 +15,7 @@ class HrPlayerBattlepass extends Model
         'battlepass_id',
         'player_id',
         'status_claimed',
+        'status_claimed_premium',
     ];
 
     public function battlepass()

@@ -13,6 +13,7 @@ class HcQuestBattlepass extends Model
     public $timestamps = false;
     protected $fillable = [
         'name_quest',
+        'quest_code',
         'description_quest',
         'reward_exp',
         'category',

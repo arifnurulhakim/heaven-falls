@@ -139,6 +139,9 @@ class HrProgressBattlepassController extends Controller
         if ($progress) {
             // Tambahkan progress baru ke progress sebelumnya
             $newProgress = $progress->current_progress + $request->current_progress;
+            if ($newProgress > $quest->target){
+                $newProgress = $quest->target;
+            }
 
             // Update progress dan cek apakah sudah selesai
             $progress->update([
@@ -154,7 +157,7 @@ class HrProgressBattlepassController extends Controller
                 'player_id' => $user->id,
                 'quest_battlepass_id' => $request->quest_battlepass_id,
                 'current_progress' => $newProgress,
-                'is_completed' => $newProgress >= $quest->target,
+                'is_completed' => (bool) $newProgress >= $quest->target??false,
             ]);
         }
 
@@ -164,6 +167,8 @@ class HrProgressBattlepassController extends Controller
                 'player_id' => $user->id,
                 'exp' => $quest->reward_exp,
             ]);
+        }else{
+            $exp = "";
         }
             return response()->json([
                 'status' => 'success',
@@ -171,6 +176,7 @@ class HrProgressBattlepassController extends Controller
                 'exp'=> $exp,
             ], 201);
         } catch (\Exception $e) {
+            dd($e);
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred.',
@@ -243,12 +249,13 @@ class HrProgressBattlepassController extends Controller
                     return [
                         'quest_id' => $quest->quest->id,
                         'name_quest' => $quest->quest->name_quest,
+                        'quest_code' => $quest->quest->quest_code,
                         'description_quest' => $quest->quest->description_quest,
                         'reward_exp' => $quest->quest->reward_exp,
                         'category' => $quest->quest->category,
                         'target' => $quest->quest->target,
                         'current_progress' => $progress->current_progress ?? 0,
-                        'is_completed' => $progress->is_completed ?? false,
+                        'is_completed' => (bool) $progress->is_completed,
                     ];
                 });
 
