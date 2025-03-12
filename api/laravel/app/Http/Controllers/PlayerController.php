@@ -180,7 +180,6 @@ class PlayerController extends Controller
         try {
             // Validasi input dari permintaan
             $validator = Validator::make($request->all(), [
-                'gender' => 'nullable|integer|in:1,2',
                 'mobile_number' => 'nullable|string|max:50',
                 'players_ip_address' => 'nullable|string|max:30',
                 'players_mac_address' => 'nullable|string|max:30',
