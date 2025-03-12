@@ -459,6 +459,7 @@ Route::middleware('otentikasi')->group(function () {
             Route::get('/friendlist-invites', 'invites');
             Route::get('/friendlist-invited', 'invited');
             Route::get('/friendlist-blocked', 'blocked');
+            Route::post('/invite-room', 'inviteRoom');
 
         });
 

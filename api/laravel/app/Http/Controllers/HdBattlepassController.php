@@ -198,6 +198,7 @@ class HdBattlepassController extends Controller
             return response()->json([
                 'status' => 'success',
                 'total_exp' => $totalExp,
+                'end_date_session' => $currentPeriod->end_date,
                 'data' => $battlepasses,
             ], 200);
         } catch (\Exception $e) {

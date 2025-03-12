@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 use App\Events\invite;
+use App\Events\InviteRoom;
 
 
 
@@ -669,6 +670,64 @@ class HdFriendlistController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred while adding the friend.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function inviteRoom(Request $request)
+    {
+        try {
+            // Validasi request
+            $validator = Validator::make($request->all(), [
+                'friend_id' => 'required|exists:hd_players,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 400);
+            }
+
+            $user = Auth::user();
+            $friendId = $request->friend_id;
+
+            // Cek apakah sudah berteman
+            $friendship = HdFriendList::where(function ($query) use ($user, $friendId) {
+                $query->where('player_id', $user->id)->where('friend_id', $friendId)
+                      ->orWhere('player_id', $friendId)->where('friend_id', $user->id);
+            })->where('accepted', true)->first();
+
+            if (!$friendship) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You are not friends with this player.',
+                ], 400);
+            }
+            $referrer = HrReferrerCode::where('player_id', $user->id)->first();
+            if (!$referrer) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'code not found.',
+                ], 404);
+            }
+
+            // Ambil referer code sebagai room_code
+            $roomCode = $referrer->code;
+
+            // Kirim event
+            event(new InviteRoom($user->username, $roomCode, $friendId));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Invitation sent successfully.',
+            ], 200);
+        } catch (\Exception $e) {
+            dd($e);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while sending the invite.',
                 'error' => $e->getMessage(),
             ], 500);
         }
