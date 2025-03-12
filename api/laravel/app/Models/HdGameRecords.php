@@ -15,6 +15,7 @@ class HdGameRecords extends Model
         'kill',
         'time',
         'map_id',
+        'win_or_lose',
         'player_id',
         'created_by',
         'modified_by',

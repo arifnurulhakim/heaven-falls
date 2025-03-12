@@ -100,14 +100,14 @@ class HdGameRecordsController extends Controller
             $record = HdGameRecords::create($data);
 
             // Update win_liberation_int atau lose_liberation_int berdasarkan win_or_lose
-            $maps = HcMap::find($request->map_id);
-            if ($maps) {
-                if ($request->win_or_lose) {
-                    $maps->increment('win_liberation');
-                } else {
-                    $maps->increment('lose_liberation');
-                }
-            }
+            // $maps = HcMap::find($request->map_id);
+            // if ($maps) {
+            //     if ($request->win_or_lose) {
+            //         $maps->increment('win_liberation');
+            //     } else {
+            //         $maps->increment('lose_liberation');
+            //     }
+            // }
 
             return response()->json([
                 'status' => 'success',

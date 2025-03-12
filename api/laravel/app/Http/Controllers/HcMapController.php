@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\HcMap;
+use App\Models\HdGameRecords;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,9 +17,10 @@ class HcMapController extends Controller
             $sortField = $request->input('sortField', 'maps_name');
             $sortDirection = $request->input('sortDirection', 'asc');
             $globalFilter = $request->input('globalFilter', '');
+    
 
             // Validasi field sorting
-            $validSortFields = ['id', 'maps_name', 'win_liberation', 'lose_liberation', 'created_by', 'modified_by'];
+            $validSortFields = ['id', 'maps_name',  'created_by', 'modified_by'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -40,15 +42,17 @@ class HcMapController extends Controller
 
             // Transformasi data sebelum dikirim sebagai response
             $maps->transform(function ($map) {
-                $totalLiberation = $map->win_liberation + $map->lose_liberation;
-                $winPercentage = $totalLiberation > 0 ? round(($map->win_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
-                $losePercentage = $totalLiberation > 0 ? round(($map->lose_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
+                $win_liberation = HdGameRecords::where('map_id',$map->id)->where('win_or_lose',1)->count();
+                $lose_liberation = HdGameRecords::where('map_id',$map->id)->where('win_or_lose',0)->count();
+                $totalLiberation = $win_liberation + $lose_liberation;
+                $winPercentage = $totalLiberation > 0 ? round(($win_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
+                $losePercentage = $totalLiberation > 0 ? round(($lose_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
 
                 return [
                     'id' => $map->id,
                     'maps_name' => $map->maps_name,
-                    'win_liberation' => $map->win_liberation,
-                    'lose_liberation' => $map->lose_liberation,
+                    'win_liberation' => $win_liberation,
+                    'lose_liberation' => $lose_liberation,
                     'total_liberation' => $totalLiberation,
                     'win_liberation_percentage' => $winPercentage,
                     'lose_liberation_percentage' => $losePercentage,

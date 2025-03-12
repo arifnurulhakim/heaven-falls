@@ -172,7 +172,7 @@ class HdMissionRewardController extends Controller
     {
         try {
             $rules = [
-                'maps_id' => 'required|integer|exists:hc_maps,id',
+                'mission_id' => 'required|integer|exists:hd_mission_maps,id',
             ];
 
             $validator = Validator::make($request->all(), $rules);
@@ -186,24 +186,20 @@ class HdMissionRewardController extends Controller
             }
 
             // Fetch all missions related to the map_id
-            $missions = HdMissionMap::where('maps_id', $request->maps_id)->get();
+            $mission = HdMissionMap::find('mission_id');
             $user = Auth::user();
-
-            $rewards = [];
-            // Loop through each mission and create a reward
-            foreach ($missions as $mission) {
-                $rewards[] = HdMissionReward::create([
+                $reward = HdMissionReward::create([
                     'missions_map_id' => $mission->id,
                     'id_player' => $user->id,
                     'reward_currency' => $mission->reward_currency,
                     'reward_exp' => $mission->reward_exp,
                 ]);
-            }
+
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Missions and rewards added successfully',
-                'data' => $rewards,
+                'message' => 'Mission and reward added successfully',
+                'data' => $reward,
             ], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

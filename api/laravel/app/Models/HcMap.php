@@ -12,8 +12,6 @@ class HcMap extends Model
     protected $table = 'hc_maps';
     protected $fillable = [
         'maps_name',
-        'win_liberation',
-        'lose_liberation',
         'created_by',
         'modified_by'];
 
