@@ -10,7 +10,12 @@ class HcMap extends Model
     use HasFactory;
 
     protected $table = 'hc_maps';
-    protected $fillable = ['maps_name', 'created_by', 'modified_by'];
+    protected $fillable = [
+        'maps_name',
+        'win_liberation',
+        'lose_liberation',
+        'created_by',
+        'modified_by'];
 
     // Relasi dengan HdMissionMap (Missions)
     public function missions()

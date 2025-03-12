@@ -51,6 +51,7 @@ class HdMissionMapController extends Controller
                     'type_missions' => $mission->type_missions,
                     'target_missions' => $mission->target_missions,
                     'reward_currency' => $mission->reward_currency,
+                    'dificulity' => $mission->dificulity,
                     'reward_exp' => $mission->reward_exp,
                     'status_missions' => $mission->status_missions,
                     'map' => $mission->map ? $mission->map->maps_name : null,

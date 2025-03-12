@@ -18,7 +18,7 @@ class HcMapController extends Controller
             $globalFilter = $request->input('globalFilter', '');
 
             // Validasi field sorting
-            $validSortFields = ['id', 'maps_name','dificulity', 'created_by', 'modified_by'];
+            $validSortFields = ['id', 'maps_name', 'win_liberation', 'lose_liberation', 'created_by', 'modified_by'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -32,11 +32,30 @@ class HcMapController extends Controller
 
             // Filter berdasarkan kata kunci global
             if ($globalFilter) {
-                $query->where('maps_name', 'like', "%{$globalFilter}%")->orwhere('dificulity', 'like', "%{$globalFilter}%");
+                $query->where('maps_name', 'like', "%{$globalFilter}%");
             }
 
             // Mengambil data dengan pagination dan sorting
             $maps = $query->orderBy($sortField, $sortDirection)->paginate($perPage);
+
+            // Transformasi data sebelum dikirim sebagai response
+            $maps->transform(function ($map) {
+                $totalLiberation = $map->win_liberation + $map->lose_liberation;
+                $winPercentage = $totalLiberation > 0 ? round(($map->win_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
+                $losePercentage = $totalLiberation > 0 ? round(($map->lose_liberation / $totalLiberation) * 100, 2) . '%' : '0%';
+
+                return [
+                    'id' => $map->id,
+                    'maps_name' => $map->maps_name,
+                    'win_liberation' => $map->win_liberation,
+                    'lose_liberation' => $map->lose_liberation,
+                    'total_liberation' => $totalLiberation,
+                    'win_liberation_percentage' => $winPercentage,
+                    'lose_liberation_percentage' => $losePercentage,
+                    'creator' => $map->creator ? $map->creator->username : null,
+                    'modifier' => $map->modifier ? $map->modifier->username : null,
+                ];
+            });
 
             return response()->json([
                 'status' => 'success',
@@ -57,7 +76,10 @@ class HcMapController extends Controller
                 ],
             ], 200);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
     public function show($id)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HcMap;
 use App\Models\HdGameRecords;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -81,6 +82,7 @@ class HdGameRecordsController extends Controller
                 'kill' => 'required|integer',
                 'time' => 'required|date_format:H:i:s', // Validasi format durasi HH:MM:SS
                 'map_id' => 'required|exists:hc_maps,id',
+                'win_or_lose' => 'required|boolean',
             ]);
 
             if ($validator->fails()) {
@@ -97,12 +99,25 @@ class HdGameRecordsController extends Controller
             // Membuat record baru
             $record = HdGameRecords::create($data);
 
+            // Update win_liberation_int atau lose_liberation_int berdasarkan win_or_lose
+            $maps = HcMap::find($request->map_id);
+            if ($maps) {
+                if ($request->win_or_lose) {
+                    $maps->increment('win_liberation');
+                } else {
+                    $maps->increment('lose_liberation');
+                }
+            }
+
             return response()->json([
                 'status' => 'success',
                 'data' => $record,
             ], 201);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
     private function convertDurationToSeconds($duration)
