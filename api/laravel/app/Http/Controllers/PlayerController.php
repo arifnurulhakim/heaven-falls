@@ -34,10 +34,12 @@ use App\Models\HrPeriodBattlepass;
 use App\Models\HrPeriodSubscription;
 use App\Models\HdBattlepass;
 use App\Models\HrPlayerLastSeen;
+use App\Models\HcTypeWeapon;
 use App\Models\HcCurrency;
 use App\Models\HcMap;
 use App\Models\HcCharacterRole;
 use App\Events\Friendlist;
+use Intervention\Image\Facades\Image;
 
 class PlayerController extends Controller
 {
@@ -179,7 +181,6 @@ class PlayerController extends Controller
         try {
             // Validasi input dari permintaan
             $validator = Validator::make($request->all(), [
-                'gender' => 'nullable|integer|in:1,2',
                 'mobile_number' => 'nullable|string|max:50',
                 'players_ip_address' => 'nullable|string|max:30',
                 'players_mac_address' => 'nullable|string|max:30',
@@ -222,7 +223,7 @@ class PlayerController extends Controller
 
             // Update data pemain
             $player->update([
-                'gender' => $request->get('gender', $player->gender),
+
                 'mobile_number' => $request->get('mobile_number', $player->mobile_number),
                 'players_ip_address' => $request->get('players_ip_address', $player->players_ip_address),
                 'players_mac_address' => $request->get('players_mac_address', $player->players_mac_address),
@@ -249,7 +250,133 @@ class PlayerController extends Controller
             ], 500);
         }
     }
+    public function updateAvatar(Request $request)
+    {
+        try {
+            // Validasi input dari permintaan
+            $validator = Validator::make($request->all(), [
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
+            ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $validator->errors(),
+                    'error_code' => 'INPUT_VALIDATION_ERROR',
+                ], 422);
+            }
+
+            // Ambil ID pemain yang sedang login
+            $playerId = Auth::id();
+            if (!$playerId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized, please login again',
+                    'error_code' => 'USER_NOT_FOUND',
+                ], 401);
+            }
+
+            // Temukan pemain berdasarkan ID
+            $player = Player::find($playerId);
+            if (!$player) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Player not found',
+                    'error_code' => 'PLAYER_NOT_FOUND',
+                ], 404);
+            }
+
+            $imageUrl = $player->avatar_url;
+
+            if ($request->hasFile('image')) {
+                // Hapus gambar lama jika ada
+                if ($player->avatar_url) {
+                    $oldImagePath = public_path($player->avatar_url);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+
+                $player_name = $player->username;
+
+                // Ambil file gambar dari request
+                $image = $request->file('image');
+                $imageName = 'avatar-' . $player_name . '-' . time() . '.' . $image->getClientOriginalExtension();
+                $imagePath = public_path('images/avatars/' . $imageName);
+
+                // Buka gambar menggunakan GD Library
+                $sourceImage = null;
+                $extension = strtolower($image->getClientOriginalExtension());
+
+                if ($extension == 'jpeg' || $extension == 'jpg') {
+                    $sourceImage = imagecreatefromjpeg($image->getRealPath());
+                } elseif ($extension == 'png') {
+                    $sourceImage = imagecreatefrompng($image->getRealPath());
+                } elseif ($extension == 'gif') {
+                    $sourceImage = imagecreatefromgif($image->getRealPath());
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Unsupported image format',
+                        'error_code' => 'UNSUPPORTED_FORMAT',
+                    ], 400);
+                }
+
+                if (!$sourceImage) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Failed to process image',
+                        'error_code' => 'IMAGE_PROCESS_ERROR',
+                    ], 500);
+                }
+
+                // Resize gambar ke 128x128
+                $newWidth = 128;
+                $newHeight = 128;
+                $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+                imagecopyresampled($resizedImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, imagesx($sourceImage), imagesy($sourceImage));
+
+                // Simpan gambar dengan kompresi
+                $quality = 80;
+                if ($extension == 'jpeg' || $extension == 'jpg') {
+                    imagejpeg($resizedImage, $imagePath, $quality);
+                } elseif ($extension == 'png') {
+                    $quality = 8; // PNG quality (0-9, semakin kecil semakin bagus)
+                    imagepng($resizedImage, $imagePath, $quality);
+                } elseif ($extension == 'gif') {
+                    imagegif($resizedImage, $imagePath);
+                }
+
+                // Pastikan gambar kurang dari 150KB
+                while (filesize($imagePath) > 150 * 1024 && $quality > 10) {
+                    $quality -= 5;
+                    if ($extension == 'jpeg' || $extension == 'jpg') {
+                        imagejpeg($resizedImage, $imagePath, $quality);
+                    } elseif ($extension == 'png') {
+                        imagepng($resizedImage, $imagePath, round($quality / 10));
+                    }
+                }
+
+                // Bersihkan memori
+                imagedestroy($sourceImage);
+                imagedestroy($resizedImage);
+
+                // Update URL gambar
+                $imageUrl = 'images/avatars/' . $imageName;
+            }
+
+            $player->update(['avatar_url' => $imageUrl]);
+
+            return response()->json(['status' => 'success', 'data' => $player], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while updating profile',
+                'error_code' => 'INTERNAL_SERVER_ERROR',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     public function adminLogin(Request $request)
     {
@@ -553,7 +680,7 @@ class PlayerController extends Controller
             $sortDirection = $request->input('sortDirection', 'asc');
             $globalFilter = $request->input('globalFilter', '');
 
-            $validSortFields = ['id', 'username', 'email', 'gender', 'mobile_number', 'level_r_id', 'inventory_r_id', 'players_ip_address', 'players_mac_address', 'players_os_type'];
+            $validSortFields = ['id', 'username', 'email', 'mobile_number', 'level_r_id', 'inventory_r_id', 'players_ip_address', 'players_mac_address', 'players_os_type'];
 
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
@@ -579,7 +706,7 @@ class PlayerController extends Controller
                     'id' => $player->id,
                     'username' => $player->username,
                     'email' => $player->email,
-                    'gender' => $player->gender == 0 ? 'male' : 'female',
+
                     'mobile_number' => $player->mobile_number,
                     'players_ip_address' => $player->players_ip_address,
                     'players_mac_address' => $player->players_mac_address,
@@ -625,7 +752,6 @@ class PlayerController extends Controller
                 ],
                 'username' => 'required|string|min:4|max:13',
                 'password' => 'required|string|min:6',
-                'gender' => 'nullable|integer|in:1,2',
                 'mobile_number' => 'nullable|string|max:50',
                 'players_ip_address' => 'nullable|string|max:30',
                 'players_mac_address' => 'nullable|string|max:30',
@@ -636,7 +762,7 @@ class PlayerController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => $validator->errors(),
+                    'message' => implode(', ', $validator->errors()->all()), // Menggabungkan semua error menjadi string
                     'error_code' => 'INPUT_VALIDATION_ERROR',
                 ], 422);
             }
@@ -670,7 +796,7 @@ class PlayerController extends Controller
             $player = Player::create([
                 'email' => $request->email,
                 'username' => $request->username,
-                // 'gender' => $request->gender,
+
                 'mobile_number' => $request->mobile_number,
                 'password' => Hash::make($request->password),
                 'players_ip_address' => $request->players_ip_address,
@@ -743,7 +869,7 @@ class PlayerController extends Controller
             $validator = Validator::make($request->all(), [
                 'email' => 'required|string|email|max:255',
                 'username' => 'required|string|min:4|max:13',
-                'gender' => 'required|integer|in:1,2',
+
                 'mobile_number' => 'nullable|string|max:50',
                 'password' => 'nullable|string|min:6',
                 'players_ip_address' => 'nullable|string|max:30',
@@ -775,7 +901,7 @@ class PlayerController extends Controller
             $playerData = $request->only([
                 'email',
                 'username',
-                'gender',
+
                 'mobile_number',
                 'players_ip_address',
                 'players_mac_address',
@@ -915,15 +1041,15 @@ class PlayerController extends Controller
     {
         try {
             $maps = HcMap::with(['missions.rewards'])->get();
-            $characterRoles = HcCharacterRole::with(['characters.skins'])->get();
-            $weapon = HcWeapon::get();
+            $characterRoles = HcCharacterRole::with(['characters.stat', 'characters.skins'])->get();
+            $typeWeapon = HcTypeWeapon::with(['subType.weapon.stat', 'subType.weapon.skins'])->get();
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'map' => $maps,
                     'character_role' => $characterRoles,
-                    'weapon' => $weapon,
+                    'type_weapon' => $typeWeapon,
                 ]
             ], 200);
         } catch (\Exception $e) {
