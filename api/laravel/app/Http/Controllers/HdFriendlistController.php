@@ -707,7 +707,7 @@ class HdFriendlistController extends Controller
                 ], 400);
             }
             $referrer = HrReferrerCode::where('player_id', $user->id)->first();
-            $referrerFriend = HrReferrerCode::where('player_id', $friendId->id)->first();
+            $referrerFriend = HrReferrerCode::where('player_id', $friendId)->first();
             if (!$referrer) {
                 return response()->json([
                     'status' => 'error',
