@@ -18,7 +18,7 @@ class Player extends Authenticatable implements JWTSubject
         'username',
         'real_name',
         'email',
-        'gender',
+        'avatar_url',
         'mobile_number',
         'password',
         'level_r_id',

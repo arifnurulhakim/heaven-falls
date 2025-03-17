@@ -376,7 +376,7 @@ class HdFriendlistController extends Controller
 
             // Build the query
             $query = HdFriendList::orderByRaw($order)
-                ->leftJoin('hd_players', 'hd_friend_lists.player_id', '=', 'hd_players.id')
+                ->leftJoin('hd_players', 'hd_friend_lists.friend_id', '=', 'hd_players.id')
                 ->where('hd_friend_lists.player_id', $user->id)  // Only filter by player_id
                 ->where('hd_friend_lists.invited', true)
                 ->select(

@@ -27,6 +27,12 @@ class HdUpgradeCurrency extends Model
         return $this->belongsTo(HcCurrency::class, 'currency_id');
     }
 
+    public function statWeapon()
+    {
+        return $this->belongsTo(HcStatWeapon::class, 'weapon_id', 'weapon_id')
+                    ->whereColumn('level_reach', 'level');
+    }
+
     /**
      * Relasi ke model HcWeapon (jika kategori adalah 'weapon')
      */

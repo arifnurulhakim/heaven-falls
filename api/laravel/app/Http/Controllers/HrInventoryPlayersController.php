@@ -84,7 +84,7 @@ class HrInventoryPlayersController extends Controller
 
                         // Ambil level weapon
                         $weaponLevel = $weaponPlayer[$weapon->id]['level'] ?? null;
-                        $weapon->weapon_level = array_key_exists($weapon->id, $weaponPlayer) ? $weaponPlayer[$weapon->id]['level'] : null;
+                        $weapon->weapon_level = array_key_exists($weapon->id, $weaponPlayer) ? $weaponPlayer[$weapon->id]['level'] : 1;
 
                         // Ambil total statistik berdasarkan levelnya
                         if ($weaponLevel) {
@@ -114,7 +114,16 @@ class HrInventoryPlayersController extends Controller
                         }
 
                         // Ambil daftar stat untuk setiap level senjata
-                        $weapon->stat_level_weapons = HcStatWeapon::where('weapon_id', $weapon->id)->get();
+                        $weapon->stat_level_weapons = HcStatWeapon::select(
+                            'hc_stat_weapons.*',
+                            'hd_upgrade_currencies.price'
+                        )
+                        ->join('hd_upgrade_currencies', function ($join) {
+                            $join->on('hc_stat_weapons.weapon_id', '=', 'hd_upgrade_currencies.weapon_id')
+                                 ->on('hc_stat_weapons.level_reach', '=', 'hd_upgrade_currencies.level');
+                        })
+                        ->where('hc_stat_weapons.weapon_id', $weapon->id)
+                        ->get();
 
                         // Ambil daftar skin untuk setiap weapon
                         $weapon->skin_weapon = HrSkinWeapon::where('weapon_id', $weapon->id)->get()->map(function ($skin) use ($ownedSkins, $equippedSkins) {

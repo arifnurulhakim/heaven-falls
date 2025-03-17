@@ -16,7 +16,7 @@ class HdMissionMapController extends Controller
             $sortField = $request->input('sortField', 'missions_name');
             $sortDirection = $request->input('sortDirection', 'asc');
             $globalFilter = $request->input('globalFilter', '');
-            $map_id =  $request->input('map_id', '');
+            $maps_id =  $request->input('maps_id', '');
 
             $validSortFields = [
                 'id', 'missions_name', 'condition', 'backstory','type_missions',
@@ -40,8 +40,8 @@ class HdMissionMapController extends Controller
                           ->orWhere('backstory', 'like', "%{$globalFilter}%");
                 });
             }
-            if ($map_id) {
-                $query->where('map_id', $map_id);
+            if ($maps_id) {
+                $query->where('maps_id', $maps_id);
             }
 
             $missions = $query->orderBy($sortField, $sortDirection)->paginate($perPage);

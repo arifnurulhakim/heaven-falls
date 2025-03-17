@@ -19,6 +19,7 @@ class HcWeapon extends Model
         'description',
         'image',
         'level_reach',
+        'max_level',
         'attack',
         'durability',
         'accuracy',

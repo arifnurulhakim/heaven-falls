@@ -23,7 +23,7 @@ class HcWeaponController extends Controller
 
         $validSortFields = [
             'id', 'name_weapons', 'attack', 'durability',
-            'accuracy', 'recoil', 'firespeed',
+            'accuracy', 'recoil', 'firespeed','level_reach','max_level',
             'point_price', 'created_by', 'modified_by'
         ];
 
@@ -99,6 +99,8 @@ class HcWeaponController extends Controller
                 'name_weapons' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
+                'level_reach' => 'required|integer',
+                'max_level' => 'required|integer',
                 'attack' => 'required|integer',
                 'durability' => 'required|integer',
                 'accuracy' => 'required|integer',
@@ -200,6 +202,8 @@ class HcWeaponController extends Controller
                 'name_weapons' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
+                'level_reach' => 'nullable|integer',
+                'max_level' => 'nullable|integer',
                 'attack' => 'nullable|integer',
                 'durability' => 'nullable|integer',
                 'accuracy' => 'nullable|integer',

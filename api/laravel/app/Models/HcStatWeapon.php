@@ -27,6 +27,12 @@ class HcStatWeapon extends Model
         return $this->belongsTo(HcWeapon::class, 'weapon_id');
     }
 
+    public function price()
+    {
+        return $this->hasOne(HdUpgradeCurrency::class, 'hd_upgrade_currencies.weapon_id', 'hc_stat_weapons.weapon_id')
+                    ->whereColumn('hd_upgrade_currencies.level', 'hc_stat_weapons.level_reach');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

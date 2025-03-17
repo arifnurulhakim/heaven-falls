@@ -420,6 +420,7 @@ Route::middleware('otentikasi')->group(function () {
         Route::post('/topup', [PlayerController::class, 'topup']);
 
         Route::put('/update-profile', [PlayerController::class, 'updateprofile']);
+        Route::post('/update-avatar', [PlayerController::class, 'updateAvatar']);
         Route::get('levelsPlayer', [LevelController::class, 'showbyplayer']);
         Route::post('reward', [RewardController::class, 'reward']);
         Route::get('inventory-weapon', [HrInventoryPlayersController::class, 'inventoryWeapon']);
