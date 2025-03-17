@@ -34,8 +34,8 @@ class HrSkinCharacterController extends Controller
             if ($globalFilter) {
                 $query->where(function ($q) use ($globalFilter) {
                     $q->where('name_skin', 'like', "%{$globalFilter}%")
-                      ->orWhere('code_skin', 'like', "%{$globalFilter}%")
-                      ->orWhere('gender_skin', 'like', "%{$globalFilter}%");
+                        ->orWhere('code_skin', 'like', "%{$globalFilter}%")
+                        ->orWhere('gender_skin', 'like', "%{$globalFilter}%");
                 });
             }
 
@@ -48,6 +48,7 @@ class HrSkinCharacterController extends Controller
                     'id' => $skin->id,
                     'name_skin' => $skin->name_skin,
                     'code_skin' => $skin->code_skin,
+                    'level_reach' => $skin->level_reach,
                     'image_skin' => $skin->image_skin,
                     'gender_skin' => $skin->gender_skin,
                     'point_price' => $skin->point_price,
@@ -83,6 +84,7 @@ class HrSkinCharacterController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'name_skin' => 'required|string|max:255',
+                'level_reach' => 'required|integer',
                 'code_skin' => 'required|string|max:255',
                 'image_skin' => 'required|image|mimes:jpeg,png,jpg,gif|max:5048',
                 'gender_skin' => 'nullable|string',
@@ -122,7 +124,7 @@ class HrSkinCharacterController extends Controller
     {
         try {
             $skin = HrSkinCharacter::find($id);
-            if(!$skin){
+            if (!$skin) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'skin not found.',
@@ -159,6 +161,7 @@ class HrSkinCharacterController extends Controller
             $validator = Validator::make($request->all(), [
                 'name_skin' => 'nullable|string|max:255',
                 'code_skin' => 'nullable|string|max:255',
+                'level_reach' => 'required|integer',
                 'image_skin' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
                 'gender_skin' => 'nullable|string',
                 'point_price' => 'nullable|numeric',
@@ -227,7 +230,7 @@ class HrSkinCharacterController extends Controller
     {
         try {
             $skin = HrSkinCharacter::find($id);
-            if(!$skin){
+            if (!$skin) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'skin not found.',

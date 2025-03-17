@@ -15,6 +15,7 @@ class HrSkinCharacter extends Model
         'character_id',
         'name_skin',
         'code_skin',
+        'level_reach',
         'image_skin',
         'gender_skin',
         'point_price',
