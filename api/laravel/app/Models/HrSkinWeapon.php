@@ -17,7 +17,7 @@ class HrSkinWeapon extends Model
         'level_reach',
         'code_skin',
         'image_skin',
-        'price',
+        'point_price',
         'created_by',
         'modified_by'
     ];

@@ -34,8 +34,8 @@ class HrSkinWeaponController extends Controller
             if ($globalFilter) {
                 $query->where(function ($q) use ($globalFilter) {
                     $q->where('name_skin', 'like', "%{$globalFilter}%")
-                      ->orWhere('code_skin', 'like', "%{$globalFilter}%")
-                      ->orWhere('gender_skin', 'like', "%{$globalFilter}%");
+                        ->orWhere('code_skin', 'like', "%{$globalFilter}%")
+                        ->orWhere('gender_skin', 'like', "%{$globalFilter}%");
                 });
             }
 
@@ -47,6 +47,7 @@ class HrSkinWeaponController extends Controller
                 return [
                     'id' => $skin->id,
                     'name_skin' => $skin->name_skin,
+                    'level_reach' => $skin->level_reach,
                     'code_skin' => $skin->code_skin,
                     'image_skin' => $skin->image_skin,
                     'gender_skin' => $skin->gender_skin,
@@ -144,6 +145,7 @@ class HrSkinWeaponController extends Controller
             $validator = Validator::make($request->all(), [
                 'name_skin' => 'nullable|string|max:255',
                 'code_skin' => 'nullable|string|max:255',
+                'level_reach' => 'nullable|integer',
                 'image_skin' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5048',
                 'gender_skin' => 'nullable|string',
                 'point_price' => 'nullable|numeric',
