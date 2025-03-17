@@ -692,6 +692,7 @@ class HdFriendlistController extends Controller
 
             $user = Auth::user();
             $friendId = $request->friend_id;
+            $playerId = $user->id;
 
             // Cek apakah sudah berteman
             $friendship = HdFriendList::where(function ($query) use ($user, $friendId) {
@@ -706,6 +707,7 @@ class HdFriendlistController extends Controller
                 ], 400);
             }
             $referrer = HrReferrerCode::where('player_id', $user->id)->first();
+            $referrerFriend = HrReferrerCode::where('player_id', $friendId->id)->first();
             if (!$referrer) {
                 return response()->json([
                     'status' => 'error',
@@ -717,8 +719,10 @@ class HdFriendlistController extends Controller
             $roomCode = $referrer->code;
 
             // Kirim event
-            event(new InviteRoom($user->username, $roomCode, $friendId));
-
+            // dd($user->username, $roomCode, $friendId);
+            $usernamePlayer = $user->username;
+            $friendCode = $referrerFriend->code;
+            event(new InviteRoom($usernamePlayer, $roomCode, $friendCode,$friendId));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Invitation sent successfully.',
