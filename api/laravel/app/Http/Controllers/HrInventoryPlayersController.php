@@ -18,6 +18,7 @@ use App\Models\HdSkinWeaponPlayer;
 use App\Models\HcSubTypeWeapon;
 use App\Models\HdWeaponPlayer;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HrInventoryPlayersController extends Controller
 {
@@ -99,10 +100,10 @@ class HrInventoryPlayersController extends Controller
                                 ->first();
 
                             $weapon->total_current_stat_weapon = [
-                                'accuracy' => $totalStats->total_accuracy ?? 0,
-                                'damage' => $totalStats->total_damage ?? 0,
-                                'range' => $totalStats->total_range ?? 0,
-                                'fire_rate' => $totalStats->total_fire_rate ?? 0,
+                                'accuracy' => (int)$totalStats->total_accuracy ?? 0,
+                                'damage' => (int)$totalStats->total_damage ?? 0,
+                                'range' => (int)$totalStats->total_range ?? 0,
+                                'fire_rate' => (int)$totalStats->total_fire_rate ?? 0,
                             ];
                         } else {
                             $weapon->total_current_stat_weapon = [
@@ -116,14 +117,17 @@ class HrInventoryPlayersController extends Controller
                         // Ambil daftar stat untuk setiap level senjata
                         $weapon->stat_level_weapons = HcStatWeapon::select(
                             'hc_stat_weapons.*',
-                            'hd_upgrade_currencies.price'
+                            DB::raw('COALESCE(CAST(hf_hd_upgrade_currencies.price AS DECIMAL(10,2)), 0.00) as price')
                         )
                         ->join('hd_upgrade_currencies', function ($join) {
                             $join->on('hc_stat_weapons.weapon_id', '=', 'hd_upgrade_currencies.weapon_id')
                                  ->on('hc_stat_weapons.level_reach', '=', 'hd_upgrade_currencies.level');
                         })
                         ->where('hc_stat_weapons.weapon_id', $weapon->id)
-                        ->get();
+                        ->get()->map(function ($stat) {
+                            $stat->price = (float) $stat->price; // Konversi ke float agar tidak dalam kutip
+                            return $stat;
+                        });
 
                         // Ambil daftar skin untuk setiap weapon
                         $weapon->skin_weapon = HrSkinWeapon::where('weapon_id', $weapon->id)->get()->map(function ($skin) use ($ownedSkins, $equippedSkins) {

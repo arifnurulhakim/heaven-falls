@@ -17,6 +17,7 @@ class HcCharacter extends Model
         'assets_name',
         'gender_character',
         'point_price',
+        'max_level',
         'character_role_id',
         'created_by',
         'modified_by'

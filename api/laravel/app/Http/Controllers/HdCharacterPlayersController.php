@@ -16,7 +16,7 @@ use App\Models\HcCharacterRole;
 use App\Models\HrStatCharacterPlayer;
 use App\Models\HdSkinCharacterPlayer;
 use App\Models\HdWallet;
-
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class HdCharacterPlayersController extends Controller
@@ -73,7 +73,7 @@ class HdCharacterPlayersController extends Controller
 
                     // Ambil level karakter
                     $characterLevel = $characterPlayer->get($character->id);
-                    $character->character_level = $characterLevel ?? null;
+                    $character->character_level = $characterLevel ?? 1;
 
                     // Ambil statistik karakter jika tersedia
                     if ($characterLevel) {
@@ -88,10 +88,10 @@ class HdCharacterPlayersController extends Controller
                             ->first();
 
                         $character->total_current_stat_character = [
-                            'hitpoints' => optional($totalStats)->total_hitpoints ?? 0,
-                            'damage' => optional($totalStats)->total_damage ?? 0,
-                            'defense' => optional($totalStats)->total_defense ?? 0,
-                            'speed' => optional($totalStats)->total_speed ?? 0,
+                            'hitpoints' =>(int) $totalStats->total_hitpoints ?? 0,
+                            'damage' =>(int)  $totalStats->total_damage ?? 0,
+                            'defense' =>(int)  $totalStats->total_defense ?? 0,
+                            'speed' =>(int)  $totalStats->total_speed ?? 0,
                         ];
                     } else {
                         $character->total_current_stat_character = [
@@ -103,7 +103,21 @@ class HdCharacterPlayersController extends Controller
                     }
 
                     // Ambil statistik level karakter
-                    $character->stat_level_characters = HcStatCharacter::where('character_id', $character->id)->get();
+                    // $character->stat_level_characters = HcStatCharacter::where('character_id', $character->id)->get();
+                    $character->stat_level_characters = HcStatCharacter::select(
+                        'hc_stat_characters.*',
+                        DB::raw('COALESCE(CAST(hf_hd_upgrade_currencies.price AS DECIMAL(10,2)), 0.00) as price')
+                    )
+                    ->join('hd_upgrade_currencies', function ($join) {
+                        $join->on('hc_stat_characters.character_id', '=', 'hd_upgrade_currencies.character_id')
+                             ->on('hc_stat_characters.level_reach', '=', 'hd_upgrade_currencies.level');
+                    })
+                    ->where('hc_stat_characters.character_id', $character->id)
+                    ->get()
+                    ->map(function ($stat) {
+                        $stat->price = (float) $stat->price; // Konversi ke float agar tidak dalam kutip
+                        return $stat;
+                    });
 
                     // Ambil daftar skin untuk setiap karakter
                     $character->skin_character = HrSkinCharacter::where('character_id', $character->id)
