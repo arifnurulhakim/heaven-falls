@@ -8,6 +8,7 @@ use App\Models\HdWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class HcTopupController extends Controller
 {
@@ -19,7 +20,7 @@ class HcTopupController extends Controller
             $globalFilter = $request->input('globalFilter', '');
             $sortField = $request->input('sortField', 'id');
 
-            $validSortFields = ['id', 'name_topup', 'amount', 'currency_id','product_code'];
+            $validSortFields = ['id', 'image','name_topup', 'amount', 'currency_id','product_code'];
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json(['status' => 'ERROR', 'message' => 'Invalid sort field'], 400);
             }
@@ -37,6 +38,8 @@ class HcTopupController extends Controller
                     'id' => $topup->id,
                     'name_topup' => $topup->name_topup,
                     'amount' => $topup->amount,
+                    'image' => $topup->image,
+                    'image_url' => env("ASSET_URL").$topup->image,
                     'product_code' => $topup->product_code,
                     'currency' => $topup->currency ? $topup->currency->name : null,
                     'creator' => $topup->creator ? $topup->creator->name : null,
@@ -51,6 +54,7 @@ class HcTopupController extends Controller
                     }),
                 ];
             });
+            // dd(env("ASSET_URL"));
 
             return response()->json([
                 'status' => 'success',
@@ -117,6 +121,12 @@ class HcTopupController extends Controller
                 // Save image URL in the database
                 $imageUrl = 'images/topup/' . $imageName;
             }
+            $product_code = $request->product_code;
+
+            if(!$product_code){
+                $type = $request->currency_id == 1 ? 'buycoin_' : 'buycrystal_';
+                $product_code = 'com.plexustechdev.heavenfalls.'.$type.$request->amount;
+            }
 
 
             // Simpan data ke tabel hc_topup
@@ -125,7 +135,7 @@ class HcTopupController extends Controller
                 'is_in_shop' => $request->is_in_shop,
                 'name_topup' => $request->name_topup,
                 'description' => $request->description,
-                'product_code' => $request->product_code,
+                'product_code' => $product_code,
                 'image' => $imageUrl,
                 'amount' => $request->amount,
                 'currency_id' => $request->currency_id,
